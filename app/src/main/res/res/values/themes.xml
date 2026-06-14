@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.MusicPlayer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:statusBarColor">#0D0D14</item>
+        <item name="android:navigationBarColor">#13131F</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
