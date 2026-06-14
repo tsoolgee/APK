@@ -223,7 +223,7 @@ fun MiniPlayerBar(
     ) {
         // Thin progress line at top
         LinearProgressIndicator(
-            progress = { progressFraction },
+            progress = progressFraction,
             modifier = Modifier.fillMaxWidth().height(2.dp),
             color = AccentViolet,
             trackColor = SurfaceBorder
@@ -321,8 +321,6 @@ fun FilterChipRow(
                 labelColor = TextSecondary
             ),
             border = FilterChipDefaults.filterChipBorder(
-                enabled = true,
-                selected = selected == null,
                 borderColor = SurfaceBorder,
                 selectedBorderColor = Color.Transparent
             )
@@ -339,8 +337,6 @@ fun FilterChipRow(
                     labelColor = TextSecondary
                 ),
                 border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
-                    selected = selected == item,
                     borderColor = SurfaceBorder,
                     selectedBorderColor = Color.Transparent
                 )

@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
 
 // ─── App Root ─────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MusicPlayerApp(viewModel: PlayerViewModel) {
     val navController  = rememberNavController()

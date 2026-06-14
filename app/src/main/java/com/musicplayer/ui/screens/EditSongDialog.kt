@@ -59,7 +59,7 @@ fun EditSongDialog(
                     }
                 }
 
-                HorizontalDivider(color = SurfaceBorder)
+                Divider(color = SurfaceBorder)
 
                 EditField(
                     value = title,
@@ -96,7 +96,7 @@ fun EditSongDialog(
                     icon = Icons.Filled.CalendarToday
                 )
 
-                HorizontalDivider(color = SurfaceBorder)
+                Divider(color = SurfaceBorder)
 
                 // Action buttons
                 Row(
