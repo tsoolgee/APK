@@ -10,7 +10,8 @@ android {
 
     defaultConfig {
         applicationId "com.musicplayer"
-        minSdk 26
+        // הגדרת תאימות למכשירים ישנים (אנדרואיד 5.0 ומעלה)
+        minSdk 21
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -19,6 +20,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
@@ -39,6 +41,9 @@ android {
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
+    
+    // --- הספרייה החסרה עבור עיצוב ה-XML ---
+    implementation 'com.google.android.material:material:1.11.0'
 
     // Compose
     implementation platform('androidx.compose:compose-bom:2024.01.00')
