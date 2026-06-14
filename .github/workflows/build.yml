@@ -15,10 +15,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        # ה-Action הזה יוריד ויתקין את Gradle באופן אוטומטי
-        # ללא צורך בקבצים בתיקיית ה-wrapper
-
       - name: Build with Gradle
-        run: gradle assembleDebug --no-daemon
+        # כאן אנחנו משתמשים ב-gradlew שנמצא בתיקייה הראשית של הפרויקט שלך
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
