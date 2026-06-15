@@ -51,7 +51,7 @@ fun LibraryScreen(
     var filterMode     by remember { mutableStateOf(FilterMode.GENRE) }
     var showFolders    by remember { mutableStateOf(false) }
 
-    // ג”€ג”€ Folder manager sheet ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ── Folder manager sheet ─────────────────────────────────────────────
     if (showFolders) {
         FolderManagerSheet(
             folders        = libraryState.scannedFolders,
@@ -67,44 +67,44 @@ fun LibraryScreen(
             .background(Background)
             .statusBarsPadding()
     ) {
-        // ג”€ג”€ Header ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+        // ── Header ──────────────────────────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("׳¡׳₪׳¨׳™׳”", style = MaterialTheme.typography.displayLarge)
+            Text("ספריה", style = MaterialTheme.typography.displayLarge)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (libraryState.isScanning) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = AccentViolet, strokeWidth = 2.dp)
                     Spacer(Modifier.width(4.dp))
                 }
-                // Folder manager button ג€” shows count badge if folders added
+                // Folder manager button — shows count badge if folders added
                 BadgedBox(badge = {
                     if (libraryState.scannedFolders.isNotEmpty()) {
                         Badge(containerColor = AccentViolet) { Text("${libraryState.scannedFolders.size}") }
                     }
                 }) {
                     IconButton(onClick = { showFolders = true }) {
-                        Icon(Icons.Filled.FolderOpen, "׳×׳™׳§׳™׳•׳×", tint = AccentViolet)
+                        Icon(Icons.Filled.FolderOpen, "תיקיות", tint = AccentViolet)
                     }
                 }
                 IconButton(onClick = onSync) {
-                    Icon(Icons.Filled.Refresh, "׳¨׳¢׳ ׳•׳", tint = TextSecondary)
+                    Icon(Icons.Filled.Refresh, "רענון", tint = TextSecondary)
                 }
-                // No label ג€” only insiders know
+                // No label — only insiders know
                 IconButton(onClick = onBmeSettings) {
                     Icon(Icons.Filled.Settings, null, tint = TextSecondary)
                 }
             }
         }
 
-        // ג”€ג”€ Search Bar ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+        // ── Search Bar ──────────────────────────────────────────────────
         OutlinedTextField(
             value = libraryState.searchQuery,
             onValueChange = onSearchQuery,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            placeholder = { Text("׳—׳™׳₪׳•׳© ׳©׳™׳¨׳™׳, ׳׳׳ ׳™׳, ׳–'׳׳ ׳¨׳™׳...", color = TextTertiary) },
+            placeholder = { Text("חיפוש שירים, אמנים, ז'אנרים...", color = TextTertiary) },
             leadingIcon  = { Icon(Icons.Filled.Search, null, tint = TextTertiary) },
             trailingIcon = {
                 if (libraryState.searchQuery.isNotEmpty()) {
@@ -125,7 +125,7 @@ fun LibraryScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // ג”€ג”€ Filter Mode Toggle ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+        // ── Filter Mode Toggle ───────────────────────────────────────────
         Row(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
@@ -159,16 +159,16 @@ fun LibraryScreen(
 
         Spacer(Modifier.height(4.dp))
 
-        Text("${displayedSongs.size} ׳©׳™׳¨׳™׳",
+        Text("${displayedSongs.size} שירים",
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
 
         if (displayedSongs.isEmpty()) {
             EmptyState(
                 icon     = Icons.Filled.MusicOff,
-                title    = if (libraryState.searchQuery.isNotBlank()) "׳׳ ׳ ׳׳¦׳׳• ׳×׳•׳¦׳׳•׳×" else "׳”׳¡׳₪׳¨׳™׳™׳” ׳¨׳™׳§׳”",
-                subtitle = if (libraryState.searchQuery.isNotBlank()) "׳ ׳¡׳” ׳—׳™׳₪׳•׳© ׳׳—׳¨"
-                           else "׳׳—׳¥ ׳¢׳ ׳×׳™׳§׳™׳™׳” ׳׳”׳•׳¡׳₪׳× ׳׳•׳–׳™׳§׳”"
+                title    = if (libraryState.searchQuery.isNotBlank()) "לא נמצאו תוצאות" else "הספרייה ריקה",
+                subtitle = if (libraryState.searchQuery.isNotBlank()) "נסה חיפוש אחר"
+                           else "לחץ על תיקייה להוספת מוזיקה"
             )
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
@@ -187,7 +187,7 @@ fun LibraryScreen(
     }
 }
 
-// ג”€ג”€ Folder Manager Bottom Sheet ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+// ── Folder Manager Bottom Sheet ───────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -213,14 +213,14 @@ fun FolderManagerSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("׳×׳™׳§׳™׳•׳× ׳׳•׳¡׳™׳§׳”", style = MaterialTheme.typography.headlineMedium)
+                Text("תיקיות מוסיקה", style = MaterialTheme.typography.headlineMedium)
                 Button(
                     onClick = onAdd,
                     colors  = ButtonDefaults.buttonColors(containerColor = AccentViolet)
                 ) {
                     Icon(Icons.Filled.Add, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("׳”׳•׳¡׳£ ׳×׳™׳§׳™׳™׳”")
+                    Text("הוסף תיקייה")
                 }
             }
 
@@ -229,7 +229,7 @@ fun FolderManagerSheet(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("׳׳ ׳ ׳‘׳—׳¨׳• ׳×׳™׳§׳™׳•׳× ׳¢׳“׳™׳™׳", color = TextTertiary,
+                    Text("לא נבחרו תיקיות עדיין", color = TextTertiary,
                         style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
@@ -261,7 +261,7 @@ fun FolderManagerSheet(
                             onClick  = { onRemove(uri) },
                             modifier = Modifier.size(32.dp)
                         ) {
-                            Icon(Icons.Filled.RemoveCircleOutline, "׳”׳¡׳¨",
+                            Icon(Icons.Filled.RemoveCircleOutline, "הסר",
                                 tint = FavoriteRed, modifier = Modifier.size(18.dp))
                         }
                     }
@@ -271,7 +271,7 @@ fun FolderManagerSheet(
     }
 }
 
-enum class FilterMode(val label: String) { ALL("׳”׳›׳"), GENRE("׳–׳׳ ׳¨"), ARTIST("׳׳׳") }
+enum class FilterMode(val label: String) { ALL("הכל"), GENRE("זאנר"), ARTIST("אמן") }
 
 @Composable
 fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String) {

@@ -44,17 +44,17 @@ internal class BmeDecryptDataSource(
                 // Try to detect: plain first, then encrypted
                 val headerBytes = buffer.copyOfRange(offset, offset + minOf(n, 10))
                 if (looksLikePlainAudio(headerBytes)) {
-                    // Play as-is ג€” regular MP3
+                    // Play as-is — regular MP3
                     decryptEnabled = false
                     resolvedOffset = Long.MAX_VALUE // never decrypt
                 } else {
-                    // Try XOR ג€” check if decoded header is valid
+                    // Try XOR — check if decoded header is valid
                     val decoded = headerBytes.map { (it.toInt() xor key).toByte() }.toByteArray()
                     if (looksLikePlainAudio(decoded)) {
                         decryptEnabled = true
                         resolvedOffset = findMp3Offset(decoded, 0, decoded.size)
                     } else {
-                        // Unknown format ג€” play plain anyway
+                        // Unknown format — play plain anyway
                         decryptEnabled = false
                         resolvedOffset = Long.MAX_VALUE
                     }
@@ -75,7 +75,7 @@ internal class BmeDecryptDataSource(
         return n
     }
 
-    // ג”€ג”€ Heuristics ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ── Heuristics ────────────────────────────────────────────────────────
 
     /** Returns true if the first bytes match MP3 sync, ID3, fLaC, OGG, RIFF */
     private fun looksLikePlainAudio(buf: ByteArray): Boolean {

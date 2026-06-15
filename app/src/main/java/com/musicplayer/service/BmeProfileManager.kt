@@ -18,14 +18,14 @@ object BmeProfileManager {
     private const val PREFS = "bme_profiles"
     private const val COUNT = "count"
 
-    // ג”€ג”€ Built-in ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ── Built-in ──────────────────────────────────────────────────────────
     // filePatterns is empty so the auto-detect logic in BmeDecryptDataSource
     // decides per-file whether decryption is needed (tries plain first).
 
     val BUILT_IN: List<BmeProfile> = listOf(
         BmeProfile(
             id           = "builtin_default",
-            name         = "׳¡׳˜׳ ׳“׳¨׳˜׳™",
+            name         = "סטנדרטי",
             key          = 27,
             startOffset  = BmeDecryptDataSource.AUTO_DETECT,
             filePatterns = emptyList(),   // applies to every file
@@ -33,7 +33,7 @@ object BmeProfileManager {
         )
     )
 
-    // ג”€ג”€ CRUD ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ── CRUD ──────────────────────────────────────────────────────────────
 
     private fun prefs(ctx: Context): SharedPreferences =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -85,9 +85,9 @@ object BmeProfileManager {
         saveUserProfiles(ctx, getUserProfiles(ctx).map { if (it.id == profile.id) profile else it })
     }
 
-    // ג”€ג”€ Matching ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ── Matching ──────────────────────────────────────────────────────────
     // Returns the first matching profile (user profiles override built-ins).
-    // Since AUTO_DETECT is used, even "matches all" profiles are safe ג€”
+    // Since AUTO_DETECT is used, even "matches all" profiles are safe —
     // the DataSource decides whether to actually decrypt.
 
     fun findProfile(ctx: Context, filePath: String): BmeProfile? {

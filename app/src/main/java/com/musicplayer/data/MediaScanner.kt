@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
 
 object MediaScanner {
 
-    // ג”€ג”€ Full device scan (MediaStore) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ── Full device scan (MediaStore) ──────────────────────────────────────
 
     suspend fun scanDevice(context: Context): List<Song> = withContext(Dispatchers.IO) {
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
@@ -43,7 +43,7 @@ object MediaScanner {
         songs
     }
 
-    // ג”€ג”€ Folder scan (SAF) ג€” recursive into sub-folders ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ── Folder scan (SAF) — recursive into sub-folders ────────────────────
 
     suspend fun scanFolder(context: Context, folderUri: Uri): List<Song> =
         withContext(Dispatchers.IO) {
@@ -84,7 +84,7 @@ object MediaScanner {
                 val docId = cursor.getString(idCol)   ?: continue
 
                 when {
-                    // Sub-folder ג€” recurse
+                    // Sub-folder — recurse
                     mime == DocumentsContract.Document.MIME_TYPE_DIR -> {
                         val subUri = DocumentsContract.buildTreeDocumentUri(
                             folderUri.authority, docId
@@ -122,7 +122,7 @@ object MediaScanner {
         }
     }
 
-    // ג”€ג”€ Cursor ג†’ Song (MediaStore) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ── Cursor → Song (MediaStore) ────────────────────────────────────────
 
     private fun cursorToSongs(cursor: Cursor): List<Song> {
         val songs       = mutableListOf<Song>()

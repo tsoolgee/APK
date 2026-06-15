@@ -48,18 +48,18 @@ fun BmeSettingsScreen(onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = { deleting = null },
             containerColor   = SurfaceDeep,
-            title = { Text("׳׳—׳™׳§׳× ׳₪׳¨׳•׳₪׳™׳", color = TextPrimary) },
-            text  = { Text("׳׳׳—׳•׳§ ׳׳× \"${target.name}\"?", color = TextSecondary) },
+            title = { Text("מחיקת פרופיל", color = TextPrimary) },
+            text  = { Text("למחוק את \"${target.name}\"?", color = TextSecondary) },
             confirmButton = {
                 TextButton(onClick = {
                     BmeProfileManager.remove(context, target.id)
                     userProfiles = BmeProfileManager.getUserProfiles(context)
                     deleting = null
-                }) { Text("׳׳—׳§", color = MaterialTheme.colorScheme.error) }
+                }) { Text("מחק", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = { deleting = null }) {
-                    Text("׳‘׳™׳˜׳•׳", color = TextSecondary)
+                    Text("ביטול", color = TextSecondary)
                 }
             }
         )
@@ -69,7 +69,7 @@ fun BmeSettingsScreen(onBack: () -> Unit) {
         containerColor = Background,
         topBar = {
             TopAppBar(
-                title = { Text("׳”׳’׳“׳¨׳•׳×", color = TextPrimary) },
+                title = { Text("הגדרות", color = TextPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, null, tint = TextPrimary)
@@ -77,7 +77,7 @@ fun BmeSettingsScreen(onBack: () -> Unit) {
                 },
                 actions = {
                     IconButton(onClick = { showAdd = true }) {
-                        Icon(Icons.Filled.Add, "׳”׳•׳¡׳£ ׳₪׳¨׳•׳₪׳™׳", tint = AccentViolet)
+                        Icon(Icons.Filled.Add, "הוסף פרופיל", tint = AccentViolet)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDeep)
@@ -92,17 +92,17 @@ fun BmeSettingsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            item { SectionTitle("׳₪׳¨׳•׳₪׳™׳׳™׳ ׳׳•׳‘׳ ׳™׳") }
+            item { SectionTitle("פרופילים מובנים") }
             items(BmeProfileManager.BUILT_IN) { profile ->
                 BmeProfileCard(profile, onEdit = null, onDelete = null)
             }
 
-            item { SectionTitle("׳”׳₪׳¨׳•׳₪׳™׳׳™׳ ׳©׳׳™") }
+            item { SectionTitle("הפרופילים שלי") }
             if (userProfiles.isEmpty()) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(vertical = 24.dp),
                         contentAlignment = Alignment.Center) {
-                        Text("׳׳™׳ ׳₪׳¨׳•׳₪׳™׳׳™׳ ׳¢׳“׳™׳™׳. ׳׳—׳¥ + ׳›׳“׳™ ׳׳”׳•׳¡׳™׳£.",
+                        Text("אין פרופילים עדיין. לחץ + כדי להוסיף.",
                             color = TextTertiary, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -119,7 +119,7 @@ fun BmeSettingsScreen(onBack: () -> Unit) {
     }
 }
 
-// ג”€ג”€ג”€ Profile Card ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+// ─── Profile Card ─────────────────────────────────────────────────────────────
 
 @Composable
 private fun BmeProfileCard(
@@ -146,14 +146,14 @@ private fun BmeProfileCard(
                 Text(profile.name, color = TextPrimary,
                     style = MaterialTheme.typography.bodyLarge)
                 val offsetLabel = when (profile.startOffset) {
-                    BmeDecryptDataSource.AUTO_DETECT -> "׳–׳™׳”׳•׳™ ׳׳•׳˜׳•׳׳˜׳™"
-                    BmeDecryptDataSource.FROM_START  -> "׳׳×׳—׳™׳׳× ׳”׳§׳•׳‘׳¥"
+                    BmeDecryptDataSource.AUTO_DETECT -> "זיהוי אוטומטי"
+                    BmeDecryptDataSource.FROM_START  -> "מתחילת הקובץ"
                     BmeDecryptDataSource.WAV_OFFSET  -> "WAV (44 bytes)"
                     else -> "offset: ${profile.startOffset}"
                 }
                 Text(offsetLabel, color = TextSecondary,
                     style = MaterialTheme.typography.bodySmall)
-                val patternsLabel = if (profile.filePatterns.isEmpty()) "׳›׳ ׳”׳§׳‘׳¦׳™׳"
+                val patternsLabel = if (profile.filePatterns.isEmpty()) "כל הקבצים"
                                     else profile.filePatterns.joinToString(", ")
                 Text(patternsLabel, color = TextTertiary,
                     style = MaterialTheme.typography.labelSmall,
@@ -176,7 +176,7 @@ private fun BmeProfileCard(
     }
 }
 
-// ג”€ג”€ג”€ Add / Edit Dialog ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+// ─── Add / Edit Dialog ────────────────────────────────────────────────────────
 
 @Composable
 private fun BmeProfileDialog(
@@ -211,28 +211,28 @@ private fun BmeProfileDialog(
                 Modifier.padding(20.dp).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(if (initial == null) "׳”׳•׳¡׳£ ׳₪׳¨׳•׳₪׳™׳" else "׳¢׳¨׳•׳ ׳₪׳¨׳•׳₪׳™׳",
+                Text(if (initial == null) "הוסף פרופיל" else "ערוך פרופיל",
                     style = MaterialTheme.typography.titleMedium, color = TextPrimary)
 
-                BmeField(value = name, label = "׳©׳ ׳”׳₪׳¨׳•׳₪׳™׳",
+                BmeField(value = name, label = "שם הפרופיל",
                     onChange = { name = it })
 
                 BmeField(
                     value   = keyText,
-                    label   = "׳׳–׳”׳” (1ג€“255)",
+                    label   = "מזהה (1–255)",
                     isError = keyText.isNotEmpty() && (keyInt == null || keyInt !in 1..255),
                     keyboard = KeyboardType.Number,
                     onChange = { keyText = it.filter(Char::isDigit) }
                 )
 
-                Text("׳ ׳§׳•׳“׳× ׳”׳×׳—׳׳”:", color = TextSecondary,
+                Text("נקודת התחלה:", color = TextSecondary,
                     style = MaterialTheme.typography.labelMedium)
 
                 listOf(
-                    "׳׳•׳˜׳•׳׳˜׳™ (MP3 / WAV)",
-                    "׳׳×׳—׳™׳׳× ׳”׳§׳•׳‘׳¥",
+                    "אוטומטי (MP3 / WAV)",
+                    "מתחילת הקובץ",
                     "WAV standard (44 bytes)",
-                    "׳׳•׳×׳׳ ׳׳™׳©׳™׳×ג€¦"
+                    "מותאם אישית…"
                 ).forEachIndexed { idx, label ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
@@ -257,15 +257,15 @@ private fun BmeProfileDialog(
 
                 BmeField(
                     value    = patterns,
-                    label    = "׳×׳‘׳ ׳™׳•׳× ׳§׳‘׳¦׳™׳ (׳¨׳™׳§ = ׳”׳›׳)",
+                    label    = "תבניות קבצים (ריק = הכל)",
                     onChange = { patterns = it }
                 )
-                Text("׳”׳₪׳¨׳“ ׳‘׳₪׳¡׳™׳§׳™׳: _enc, ׳©׳_׳×׳‘׳ ׳™׳×",
+                Text("הפרד בפסיקים: _enc, שם_תבנית",
                     color = TextTertiary, style = MaterialTheme.typography.labelSmall)
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
-                        Text("׳‘׳™׳˜׳•׳", color = TextSecondary)
+                        Text("ביטול", color = TextSecondary)
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(
@@ -287,14 +287,14 @@ private fun BmeProfileDialog(
                         },
                         enabled = isValid,
                         colors  = ButtonDefaults.buttonColors(containerColor = AccentViolet)
-                    ) { Text("׳©׳׳•׳¨") }
+                    ) { Text("שמור") }
                 }
             }
         }
     }
 }
 
-// ג”€ג”€ג”€ helpers ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+// ─── helpers ──────────────────────────────────────────────────────────────────
 
 @Composable
 private fun SectionTitle(text: String) {

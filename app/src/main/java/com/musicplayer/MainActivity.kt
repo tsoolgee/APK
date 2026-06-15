@@ -27,9 +27,9 @@ import com.musicplayer.ui.theme.*
 import com.musicplayer.viewmodel.PlayerViewModel
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Library     : Screen("library",      "׳¡׳₪׳¨׳™׳”",   Icons.Filled.LibraryMusic)
-    object Favorites   : Screen("favorites",    "׳׳•׳¢׳“׳₪׳™׳",  Icons.Filled.Favorite)
-    object Queue       : Screen("queue",        "׳×׳•׳¨",      Icons.Filled.QueueMusic)
+    object Library     : Screen("library",      "ספריה",   Icons.Filled.LibraryMusic)
+    object Favorites   : Screen("favorites",    "מועדפים",  Icons.Filled.Favorite)
+    object Queue       : Screen("queue",        "תור",      Icons.Filled.QueueMusic)
     object BmeSettings : Screen("bme_settings", "",         Icons.Filled.Settings)
 }
 
