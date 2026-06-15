@@ -1,4 +1,4 @@
-﻿package com.musicplayer
+package com.musicplayer
 
 import android.Manifest
 import android.net.Uri
@@ -26,10 +26,8 @@ import com.musicplayer.ui.screens.*
 import com.musicplayer.ui.theme.*
 import com.musicplayer.viewmodel.PlayerViewModel
 
-// ג”€ג”€ג”€ Navigation Destinations ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Library     : Screen("library",      "׳¡׳₪׳¨׳™׳™׳”",   Icons.Filled.LibraryMusic)
+    object Library     : Screen("library",      "׳¡׳₪׳¨׳™׳”",   Icons.Filled.LibraryMusic)
     object Favorites   : Screen("favorites",    "׳׳•׳¢׳“׳₪׳™׳",  Icons.Filled.Favorite)
     object Queue       : Screen("queue",        "׳×׳•׳¨",      Icons.Filled.QueueMusic)
     object BmeSettings : Screen("bme_settings", "",         Icons.Filled.Settings)
@@ -37,27 +35,21 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 
 val bottomNavItems = listOf(Screen.Library, Screen.Favorites, Screen.Queue)
 
-// ג”€ג”€ג”€ Main Activity ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
 class MainActivity : ComponentActivity() {
 
     private val viewModel: PlayerViewModel by viewModels()
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { grants ->
-        if (grants.values.any { it }) viewModel.syncLibrary()
-    }
+    ) { grants -> if (grants.values.any { it }) viewModel.syncLibrary() }
 
-    // Folder picker ג€” opens system folder browser, scans selected folder
     private var folderPickerCallback: ((Uri) -> Unit)? = null
     private val folderPickerLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
         if (uri != null) {
             contentResolver.takePersistableUriPermission(
-                uri,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
             folderPickerCallback?.invoke(uri)
         }
@@ -71,14 +63,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestPermissions()
-        setContent {
-            MusicPlayerTheme {
-                MusicPlayerApp(
-                    viewModel     = viewModel,
-                    activity      = this
-                )
-            }
-        }
+        setContent { MusicPlayerTheme { MusicPlayerApp(viewModel = viewModel, activity = this) } }
     }
 
     private fun requestPermissions() {
@@ -90,26 +75,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// ג”€ג”€ג”€ App Root ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MusicPlayerApp(
-    viewModel: PlayerViewModel,
-    activity: MainActivity
-) {
-    val navController  = rememberNavController()
-    val playerState    by viewModel.playerState.collectAsState()
-    val libraryState   by viewModel.libraryState.collectAsState()
-    val favorites      by viewModel.favorites.collectAsState()
-    val queue          by viewModel.queue.collectAsState()
-    val genres         by viewModel.genres.collectAsState()
-    val artists        by viewModel.artists.collectAsState()
-    val editSong       by viewModel.editSong.collectAsState()
+fun MusicPlayerApp(viewModel: PlayerViewModel, activity: MainActivity) {
+    val navController = rememberNavController()
+    val playerState   by viewModel.playerState.collectAsState()
+    val libraryState  by viewModel.libraryState.collectAsState()
+    val favorites     by viewModel.favorites.collectAsState()
+    val queue         by viewModel.queue.collectAsState()
+    val genres        by viewModel.genres.collectAsState()
+    val artists       by viewModel.artists.collectAsState()
+    val editSong      by viewModel.editSong.collectAsState()
 
     var showNowPlaying by remember { mutableStateOf(false) }
 
-    // ג”€ג”€ Full-screen Now Playing ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
     if (showNowPlaying && playerState.currentSong != null) {
         NowPlayingScreen(
             state        = playerState,
@@ -126,7 +105,6 @@ fun MusicPlayerApp(
         return
     }
 
-    // ג”€ג”€ Edit Song Dialog ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
     editSong?.let { song ->
         EditSongDialog(song = song, onSave = viewModel::saveSong, onDismiss = viewModel::closeEditSong)
     }
@@ -134,9 +112,9 @@ fun MusicPlayerApp(
     Scaffold(
         containerColor = Background,
         bottomBar = {
-            val navBackStackEntry    by navController.currentBackStackEntryAsState()
-            val currentDestination   = navBackStackEntry?.destination
-            val isOnBmeSettings      = currentDestination?.route == Screen.BmeSettings.route
+            val entry               by navController.currentBackStackEntryAsState()
+            val currentDestination  = entry?.destination
+            val isOnBmeSettings     = currentDestination?.route == Screen.BmeSettings.route
 
             if (!isOnBmeSettings) {
                 Column {
@@ -152,7 +130,6 @@ fun MusicPlayerApp(
                             onNext      = viewModel::skipNext
                         )
                     }
-
                     NavigationBar(containerColor = SurfaceDeep, tonalElevation = 0.dp) {
                         bottomNavItems.forEach { screen ->
                             val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
@@ -161,18 +138,14 @@ fun MusicPlayerApp(
                                 onClick  = {
                                     navController.navigate(screen.route) {
                                         popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState    = true
+                                        launchSingleTop = true; restoreState = true
                                     }
                                 },
                                 icon = {
                                     BadgedBox(badge = {
-                                        if (screen == Screen.Queue && queue.isNotEmpty()) {
+                                        if (screen == Screen.Queue && queue.isNotEmpty())
                                             Badge(containerColor = AccentViolet) { Text("${queue.size}") }
-                                        }
-                                    }) {
-                                        Icon(screen.icon, screen.label, modifier = Modifier.size(22.dp))
-                                    }
+                                    }) { Icon(screen.icon, screen.label, modifier = Modifier.size(22.dp)) }
                                 },
                                 label  = { Text(screen.label, style = MaterialTheme.typography.labelSmall) },
                                 colors = NavigationBarItemDefaults.colors(
@@ -198,27 +171,25 @@ fun MusicPlayerApp(
         ) {
             composable(Screen.Library.route) {
                 LibraryScreen(
-                    libraryState  = libraryState,
-                    playerState   = playerState,
-                    genres        = genres,
-                    artists       = artists,
-                    onSearchQuery = viewModel::setSearchQuery,
-                    onFilterGenre = viewModel::filterByGenre,
-                    onFilterArtist= viewModel::filterByArtist,
-                    onPlaySong    = { song -> viewModel.playSong(song, libraryState.filteredSongs) },
-                    onFavorite    = viewModel::toggleFavorite,
-                    onAddToQueue  = viewModel::addToQueue,
-                    onEditSong    = viewModel::openEditSong,
-                    onSync        = viewModel::syncLibrary,
-                    onBmeSettings = { navController.navigate(Screen.BmeSettings.route) },
-                    onPickFolder  = {
-                        activity.launchFolderPicker { uri ->
-                            viewModel.syncFolder(activity, uri)
-                        }
-                    }
+                    libraryState   = libraryState,
+                    playerState    = playerState,
+                    genres         = genres,
+                    artists        = artists,
+                    onSearchQuery  = viewModel::setSearchQuery,
+                    onFilterGenre  = viewModel::filterByGenre,
+                    onFilterArtist = viewModel::filterByArtist,
+                    onPlaySong     = { song -> viewModel.playSong(song, libraryState.filteredSongs) },
+                    onFavorite     = viewModel::toggleFavorite,
+                    onAddToQueue   = viewModel::addToQueue,
+                    onEditSong     = viewModel::openEditSong,
+                    onSync         = viewModel::syncLibrary,
+                    onBmeSettings  = { navController.navigate(Screen.BmeSettings.route) },
+                    onPickFolder   = {
+                        activity.launchFolderPicker { uri -> viewModel.syncFolder(activity, uri) }
+                    },
+                    onRemoveFolder = { uri -> viewModel.removeFolder(activity, uri) }
                 )
             }
-
             composable(Screen.Favorites.route) {
                 FavoritesScreen(
                     favorites    = favorites,
@@ -229,7 +200,6 @@ fun MusicPlayerApp(
                     onEdit       = viewModel::openEditSong
                 )
             }
-
             composable(Screen.Queue.route) {
                 QueueScreen(
                     queue       = queue,
@@ -241,11 +211,9 @@ fun MusicPlayerApp(
                     onEdit      = viewModel::openEditSong
                 )
             }
-
             composable(Screen.BmeSettings.route) {
                 BmeSettingsScreen(onBack = { navController.popBackStack() })
             }
         }
     }
 }
-

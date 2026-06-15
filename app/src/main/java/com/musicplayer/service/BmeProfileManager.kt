@@ -1,4 +1,4 @@
-﻿package com.musicplayer.service
+package com.musicplayer.service
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -97,4 +97,3 @@ object BmeProfileManager {
         }
     }
 }
-

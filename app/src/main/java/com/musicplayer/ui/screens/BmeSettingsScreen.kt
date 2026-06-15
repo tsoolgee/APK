@@ -1,4 +1,4 @@
-﻿package com.musicplayer.ui.screens
+package com.musicplayer.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -329,4 +329,3 @@ private fun BmeField(
         )
     )
 }
-

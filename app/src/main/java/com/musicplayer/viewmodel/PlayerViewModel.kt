@@ -1,4 +1,4 @@
-﻿package com.musicplayer.viewmodel
+package com.musicplayer.viewmodel
 
 import android.app.Application
 import android.content.ComponentName
@@ -12,6 +12,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.musicplayer.data.FolderManager
 import com.musicplayer.data.MusicRepository
 import com.musicplayer.data.Song
 import com.musicplayer.service.MusicService
@@ -35,59 +36,47 @@ data class LibraryState(
     val searchQuery: String = "",
     val filteredSongs: List<Song> = emptyList(),
     val selectedGenre: String? = null,
-    val selectedArtist: String? = null
+    val selectedArtist: String? = null,
+    val scannedFolders: List<Uri> = emptyList()
 )
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo = MusicRepository.getInstance(application)
 
-    // ג”€ג”€ Player state ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
-    private val _playerState = MutableStateFlow(PlayerState())
+    private val _playerState  = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
-
-    // ג”€ג”€ Library state ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private val _libraryState = MutableStateFlow(LibraryState())
     val libraryState: StateFlow<LibraryState> = _libraryState.asStateFlow()
 
-    // ג”€ג”€ Collections ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
-    val favorites: StateFlow<List<Song>> = repo.favorites
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    val queue: StateFlow<List<Song>> = repo.queue
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    val genres: StateFlow<List<String>> = repo.allGenres
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    val artists: StateFlow<List<String>> = repo.allArtists
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    // ג”€ג”€ Edit song dialog ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    val favorites: StateFlow<List<Song>> = repo.favorites.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val queue:     StateFlow<List<Song>> = repo.queue.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val genres:    StateFlow<List<String>> = repo.allGenres.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val artists:   StateFlow<List<String>> = repo.allArtists.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _editSong = MutableStateFlow<Song?>(null)
     val editSong: StateFlow<Song?> = _editSong.asStateFlow()
-
-    // ג”€ג”€ MediaController ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var controller: MediaController? = null
 
     init {
         loadLibrary()
+        loadFolders()
         connectController()
         startProgressPoller()
     }
 
-    private fun connectController() {
-        val sessionToken = SessionToken(
-            getApplication(),
-            ComponentName(getApplication(), MusicService::class.java)
+    private fun loadFolders() {
+        _libraryState.value = _libraryState.value.copy(
+            scannedFolders = FolderManager.getFolders(getApplication())
         )
-        controllerFuture = MediaController.Builder(getApplication(), sessionToken).buildAsync()
+    }
+
+    private fun connectController() {
+        val token = SessionToken(getApplication(), ComponentName(getApplication(), MusicService::class.java))
+        controllerFuture = MediaController.Builder(getApplication(), token).buildAsync()
         controllerFuture?.addListener({
             controller = controllerFuture?.get()
             controller?.addListener(playerListener)
@@ -98,52 +87,37 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _playerState.value = _playerState.value.copy(isPlaying = isPlaying)
         }
-
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             val id = mediaItem?.mediaId?.toLongOrNull() ?: return
             viewModelScope.launch {
                 val song = repo.getSongById(id)
-                _playerState.value = _playerState.value.copy(
-                    currentSong = song,
-                    duration = controller?.duration ?: 0L
-                )
+                _playerState.value = _playerState.value.copy(currentSong = song, duration = controller?.duration ?: 0L)
                 if (song != null) repo.incrementPlayCount(id)
             }
         }
-
-        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-            _playerState.value = _playerState.value.copy(shuffleEnabled = shuffleModeEnabled)
-        }
-
-        override fun onRepeatModeChanged(repeatMode: Int) {
-            _playerState.value = _playerState.value.copy(repeatMode = repeatMode)
-        }
+        override fun onShuffleModeEnabledChanged(e: Boolean) { _playerState.value = _playerState.value.copy(shuffleEnabled = e) }
+        override fun onRepeatModeChanged(r: Int)              { _playerState.value = _playerState.value.copy(repeatMode = r) }
     }
 
     private fun startProgressPoller() {
         viewModelScope.launch {
             while (true) {
                 controller?.let { c ->
-                    if (c.isPlaying) {
-                        _playerState.value = _playerState.value.copy(
-                            progress = c.currentPosition,
-                            duration = c.duration.coerceAtLeast(0)
-                        )
-                    }
+                    if (c.isPlaying) _playerState.value = _playerState.value.copy(
+                        progress = c.currentPosition,
+                        duration = c.duration.coerceAtLeast(0)
+                    )
                 }
                 delay(500)
             }
         }
     }
 
-    // ג”€ג”€ Library actions ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
     private fun loadLibrary() {
         viewModelScope.launch {
             repo.allSongs.collect { songs ->
-                val state = _libraryState.value
-                val filtered = filterSongs(songs, state.searchQuery)
-                _libraryState.value = state.copy(songs = songs, filteredSongs = filtered)
+                val s = _libraryState.value
+                _libraryState.value = s.copy(songs = songs, filteredSongs = filterSongs(songs, s.searchQuery))
             }
         }
     }
@@ -156,130 +130,73 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    /** Scan a user-chosen folder (SAF Uri) */
-    fun syncFolder(context: Context, folderUri: Uri) {
+    fun syncFolder(context: Context, uri: Uri) {
         viewModelScope.launch {
             _libraryState.value = _libraryState.value.copy(isScanning = true)
-            repo.syncFolder(context, folderUri)
-            _libraryState.value = _libraryState.value.copy(isScanning = false)
+            repo.syncFolder(context, uri)
+            _libraryState.value = _libraryState.value.copy(
+                isScanning = false,
+                scannedFolders = FolderManager.getFolders(context)
+            )
+        }
+    }
+
+    fun removeFolder(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            repo.removeFolder(context, uri)
+            _libraryState.value = _libraryState.value.copy(
+                scannedFolders = FolderManager.getFolders(context)
+            )
         }
     }
 
     fun setSearchQuery(query: String) {
-        val state = _libraryState.value
-        val filtered = filterSongs(state.songs, query)
-        _libraryState.value = state.copy(searchQuery = query, filteredSongs = filtered)
+        val s = _libraryState.value
+        _libraryState.value = s.copy(searchQuery = query, filteredSongs = filterSongs(s.songs, query))
     }
 
     private fun filterSongs(songs: List<Song>, query: String): List<Song> {
         if (query.isBlank()) return songs
         val q = query.lowercase()
         return songs.filter {
-            it.title.lowercase().contains(q) ||
-            it.artist.lowercase().contains(q) ||
-            it.album.lowercase().contains(q) ||
-            it.genre.lowercase().contains(q)
+            it.title.lowercase().contains(q) || it.artist.lowercase().contains(q) ||
+            it.album.lowercase().contains(q) || it.genre.lowercase().contains(q)
         }
     }
 
-    fun filterByGenre(genre: String?) {
-        _libraryState.value = _libraryState.value.copy(selectedGenre = genre, selectedArtist = null)
-    }
-
-    fun filterByArtist(artist: String?) {
-        _libraryState.value = _libraryState.value.copy(selectedArtist = artist, selectedGenre = null)
-    }
-
-    // ג”€ג”€ Playback actions ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    fun filterByGenre(genre: String?)   { _libraryState.value = _libraryState.value.copy(selectedGenre = genre, selectedArtist = null) }
+    fun filterByArtist(artist: String?) { _libraryState.value = _libraryState.value.copy(selectedArtist = artist, selectedGenre = null) }
 
     fun playSong(song: Song, songList: List<Song> = emptyList()) {
         viewModelScope.launch {
             val playlist = if (songList.isEmpty()) listOf(song) else songList
             repo.setQueue(playlist)
-
             val items = playlist.map { MusicService.buildMediaItem(it) }
-            val startIndex = playlist.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-
-            controller?.apply {
-                setMediaItems(items, startIndex, 0)
-                prepare()
-                play()
-            }
-
+            val idx   = playlist.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+            controller?.apply { setMediaItems(items, idx, 0); prepare(); play() }
             _playerState.value = _playerState.value.copy(currentSong = song, isPlaying = true)
         }
     }
 
-    fun togglePlayPause() {
-        controller?.let { if (it.isPlaying) it.pause() else it.play() }
-    }
+    fun togglePlayPause() { controller?.let { if (it.isPlaying) it.pause() else it.play() } }
+    fun skipNext()        { controller?.seekToNextMediaItem() }
+    fun skipPrevious()    { controller?.let { if (it.currentPosition > 3000) it.seekTo(0) else it.seekToPreviousMediaItem() } }
+    fun seekTo(pos: Long) { controller?.seekTo(pos); _playerState.value = _playerState.value.copy(progress = pos) }
+    fun toggleShuffle()   { controller?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }
+    fun cycleRepeat()     { controller?.let { it.repeatMode = when (it.repeatMode) { Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL; Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE; else -> Player.REPEAT_MODE_OFF } } }
 
-    fun skipNext() { controller?.seekToNextMediaItem() }
-    fun skipPrevious() {
-        controller?.let {
-            if (it.currentPosition > 3000) it.seekTo(0) else it.seekToPreviousMediaItem()
-        }
-    }
+    fun toggleFavorite(song: Song)  { viewModelScope.launch { repo.toggleFavorite(song) } }
+    fun addToQueue(song: Song)      { viewModelScope.launch { repo.addToQueue(song); controller?.addMediaItem(MusicService.buildMediaItem(song)) } }
+    fun removeFromQueue(song: Song) { viewModelScope.launch { repo.removeFromQueue(song.id) } }
+    fun clearQueue()                { viewModelScope.launch { repo.clearQueue(); controller?.clearMediaItems() } }
 
-    fun seekTo(position: Long) {
-        controller?.seekTo(position)
-        _playerState.value = _playerState.value.copy(progress = position)
-    }
-
-    fun toggleShuffle() {
-        controller?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
-    }
-
-    fun cycleRepeat() {
-        controller?.let {
-            it.repeatMode = when (it.repeatMode) {
-                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                else -> Player.REPEAT_MODE_OFF
-            }
-        }
-    }
-
-    // ג”€ג”€ Favorites ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
-    fun toggleFavorite(song: Song) {
-        viewModelScope.launch { repo.toggleFavorite(song) }
-    }
-
-    // ג”€ג”€ Queue ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
-    fun addToQueue(song: Song) {
-        viewModelScope.launch {
-            repo.addToQueue(song)
-            controller?.let { c ->
-                c.addMediaItem(MusicService.buildMediaItem(song))
-            }
-        }
-    }
-
-    fun removeFromQueue(song: Song) {
-        viewModelScope.launch { repo.removeFromQueue(song.id) }
-    }
-
-    fun clearQueue() {
-        viewModelScope.launch {
-            repo.clearQueue()
-            controller?.clearMediaItems()
-        }
-    }
-
-    // ג”€ג”€ Edit song metadata ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
-    fun openEditSong(song: Song) { _editSong.value = song }
-    fun closeEditSong() { _editSong.value = null }
-
+    fun openEditSong(song: Song)  { _editSong.value = song }
+    fun closeEditSong()           { _editSong.value = null }
     fun saveSong(song: Song) {
         viewModelScope.launch {
             repo.updateSong(song)
             _editSong.value = null
-            if (_playerState.value.currentSong?.id == song.id) {
-                _playerState.value = _playerState.value.copy(currentSong = song)
-            }
+            if (_playerState.value.currentSong?.id == song.id) _playerState.value = _playerState.value.copy(currentSong = song)
         }
     }
 
@@ -289,4 +206,3 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         super.onCleared()
     }
 }
-

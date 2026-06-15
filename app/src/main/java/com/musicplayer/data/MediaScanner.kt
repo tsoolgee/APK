@@ -1,4 +1,4 @@
-﻿package com.musicplayer.data
+package com.musicplayer.data
 
 import android.content.ContentUris
 import android.content.Context
@@ -9,15 +9,12 @@ import android.provider.DocumentsContract
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 object MediaScanner {
 
     // ג”€ג”€ Full device scan (MediaStore) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     suspend fun scanDevice(context: Context): List<Song> = withContext(Dispatchers.IO) {
-        val songs = mutableListOf<Song>()
-
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
         else
@@ -36,33 +33,44 @@ object MediaScanner {
         )
 
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} > 10000"
+        val songs = mutableListOf<Song>()
 
         context.contentResolver.query(
             collection, projection, selection, null,
             "${MediaStore.Audio.Media.TITLE} ASC"
-        )?.use { cursor ->
-            songs.addAll(cursorToSongs(cursor))
-        }
+        )?.use { cursor -> songs.addAll(cursorToSongs(cursor)) }
 
         songs
     }
 
-    // ג”€ג”€ Folder scan (SAF ג€” Storage Access Framework) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // ג”€ג”€ Folder scan (SAF) ג€” recursive into sub-folders ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
-    suspend fun scanFolder(context: Context, folderUri: Uri): List<Song> = withContext(Dispatchers.IO) {
-        val songs = mutableListOf<Song>()
-        val treeUri = DocumentsContract.buildChildDocumentsUriUsingTree(
-            folderUri,
+    suspend fun scanFolder(context: Context, folderUri: Uri): List<Song> =
+        withContext(Dispatchers.IO) {
+            val songs = mutableListOf<Song>()
+            scanFolderRecursive(context, folderUri, songs)
+            songs
+        }
+
+    private fun scanFolderRecursive(
+        context: Context,
+        folderUri: Uri,
+        out: MutableList<Song>
+    ) {
+        val docId = try {
             DocumentsContract.getTreeDocumentId(folderUri)
-        )
+        } catch (e: Exception) {
+            DocumentsContract.getDocumentId(folderUri)
+        }
+
+        val childUri = DocumentsContract.buildChildDocumentsUriUsingTree(folderUri, docId)
 
         context.contentResolver.query(
-            treeUri,
+            childUri,
             arrayOf(
                 DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                 DocumentsContract.Document.COLUMN_DISPLAY_NAME,
                 DocumentsContract.Document.COLUMN_MIME_TYPE,
-                DocumentsContract.Document.COLUMN_SIZE
             ),
             null, null, null
         )?.use { cursor ->
@@ -71,46 +79,53 @@ object MediaScanner {
             val mimeCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
 
             while (cursor.moveToNext()) {
-                val mime = cursor.getString(mimeCol) ?: continue
-                val name = cursor.getString(nameCol) ?: continue
+                val mime  = cursor.getString(mimeCol) ?: continue
+                val name  = cursor.getString(nameCol) ?: continue
+                val docId = cursor.getString(idCol)   ?: continue
 
-                // Accept audio/* or files that look like mp3/flac/ogg/m4a
-                val isAudio = mime.startsWith("audio/") ||
-                    name.lowercase().let { n ->
-                        n.endsWith(".mp3") || n.endsWith(".flac") ||
-                        n.endsWith(".ogg") || n.endsWith(".m4a")  ||
-                        n.endsWith(".wav") || n.endsWith(".aac")
+                when {
+                    // Sub-folder ג€” recurse
+                    mime == DocumentsContract.Document.MIME_TYPE_DIR -> {
+                        val subUri = DocumentsContract.buildTreeDocumentUri(
+                            folderUri.authority, docId
+                        )
+                        scanFolderRecursive(context, subUri, out)
                     }
-                if (!isAudio) continue
-
-                val docId  = cursor.getString(idCol)
-                val fileUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, docId)
-                val path    = fileUri.toString()
-
-                // Use docId hash as stable ID (no MediaStore ID available)
-                val id = path.hashCode().toLong() and 0x7FFFFFFF_FFFFFFFFL
-
-                songs.add(
-                    Song(
-                        id           = id,
-                        title        = name.substringBeforeLast("."),
-                        artist       = "Unknown Artist",
-                        album        = "Unknown Album",
-                        duration     = 0L,
-                        path         = path,
-                        albumArtUri  = null
-                    )
-                )
+                    // Audio file
+                    isAudioFile(mime, name) -> {
+                        val fileUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, docId)
+                        val path    = fileUri.toString()
+                        val id      = path.hashCode().toLong() and 0x7FFFFFFFFFFFFFFFL
+                        out.add(
+                            Song(
+                                id          = id,
+                                title       = name.substringBeforeLast("."),
+                                artist      = "Unknown Artist",
+                                album       = "Unknown Album",
+                                duration    = 0L,
+                                path        = path,
+                                albumArtUri = null
+                            )
+                        )
+                    }
+                }
             }
         }
-
-        songs
     }
 
-    // ג”€ג”€ Cursor ג†’ Song list (MediaStore) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    private fun isAudioFile(mime: String, name: String): Boolean {
+        if (mime.startsWith("audio/")) return true
+        return name.lowercase().let {
+            it.endsWith(".mp3") || it.endsWith(".flac") ||
+            it.endsWith(".ogg") || it.endsWith(".m4a")  ||
+            it.endsWith(".wav") || it.endsWith(".aac")
+        }
+    }
+
+    // ג”€ג”€ Cursor ג†’ Song (MediaStore) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private fun cursorToSongs(cursor: Cursor): List<Song> {
-        val songs = mutableListOf<Song>()
+        val songs       = mutableListOf<Song>()
         val idCol       = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
         val titleCol    = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
         val artistCol   = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
@@ -124,34 +139,25 @@ object MediaScanner {
         while (cursor.moveToNext()) {
             val id      = cursor.getLong(idCol)
             val albumId = cursor.getLong(albumIdCol)
-            val albumArtUri = ContentUris.withAppendedId(
-                Uri.parse("content://media/external/audio/albumart"), albumId
-            ).toString()
-
-            songs.add(
-                Song(
-                    id          = id,
-                    title       = cursor.getString(titleCol)   ?: "Unknown",
-                    artist      = cursor.getString(artistCol)  ?: "Unknown Artist",
-                    album       = cursor.getString(albumCol)   ?: "Unknown Album",
-                    duration    = cursor.getLong(durationCol),
-                    path        = cursor.getString(dataCol)    ?: "",
-                    albumArtUri = albumArtUri,
-                    year        = cursor.getInt(yearCol),
-                    trackNumber = cursor.getInt(trackCol)
-                )
-            )
+            songs.add(Song(
+                id          = id,
+                title       = cursor.getString(titleCol)  ?: "Unknown",
+                artist      = cursor.getString(artistCol) ?: "Unknown Artist",
+                album       = cursor.getString(albumCol)  ?: "Unknown Album",
+                duration    = cursor.getLong(durationCol),
+                path        = cursor.getString(dataCol)   ?: "",
+                albumArtUri = ContentUris.withAppendedId(
+                    Uri.parse("content://media/external/audio/albumart"), albumId
+                ).toString(),
+                year        = cursor.getInt(yearCol),
+                trackNumber = cursor.getInt(trackCol)
+            ))
         }
         return songs
     }
 
-    // ג”€ג”€ Helpers ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-
     fun formatDuration(ms: Long): String {
-        val totalSeconds = ms / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "%d:%02d".format(minutes, seconds)
+        val s = ms / 1000
+        return "%d:%02d".format(s / 60, s % 60)
     }
 }
-

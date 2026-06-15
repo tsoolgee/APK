@@ -1,4 +1,4 @@
-﻿package com.musicplayer.service
+package com.musicplayer.service
 
 import android.net.Uri
 import androidx.media3.datasource.DataSource
@@ -132,4 +132,3 @@ internal class BmeDecryptDataSource(
         const val WAV_OFFSET  = 44L
     }
 }
-
