@@ -8,10 +8,11 @@ import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.FileDescriptorDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -61,7 +62,7 @@ class MusicService : MediaSessionService() {
     }
 }
 
-// ─── Factory that routes to correct DataSource ────────────────────────────────
+// ─── Factory ──────────────────────────────────────────────────────────────────
 
 private class BmeAwareDataSourceFactory(
     private val context: Context
@@ -69,24 +70,22 @@ private class BmeAwareDataSourceFactory(
     override fun createDataSource(): DataSource = BmeRoutingDataSource(context)
 }
 
+// ─── Router: picks plain / SAF / BME datasource ───────────────────────────────
+
 private class BmeRoutingDataSource(
     private val context: Context
 ) : DataSource {
 
     private var delegate: DataSource? = null
-    private var pfd: ParcelFileDescriptor? = null
-    private val TAG = "BmeRoutingDataSource"
+    private val TAG = "BmeRoutingDS"
 
     override fun open(dataSpec: DataSpec): Long {
-        val uriString = dataSpec.uri.toString()
-        val profile   = BmeProfileManager.findProfile(context, uriString)
+        val uriStr  = dataSpec.uri.toString()
+        val profile = BmeProfileManager.findProfile(context, uriStr)
+        val isSaf   = isSafUri(dataSpec.uri)
 
-        // Detect if this is a SAF document tree Uri (content://...tree...)
-        val isSafUri = isSafDocumentUri(dataSpec.uri)
-
-        val upstream: DataSource = if (isSafUri) {
-            // For SAF uris, open via FileDescriptor
-            SafFileDescriptorDataSource(context)
+        val upstream: DataSource = if (isSaf) {
+            SafDataSource(context)
         } else {
             DefaultDataSource.Factory(context).createDataSource()
         }
@@ -100,65 +99,56 @@ private class BmeRoutingDataSource(
         return try {
             delegate!!.open(dataSpec)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open: ${dataSpec.uri}", e)
+            Log.e(TAG, "open failed: ${dataSpec.uri}", e)
             throw e
         }
     }
 
-    private fun isSafDocumentUri(uri: Uri): Boolean {
-        return try {
-            uri.scheme == "content" &&
-            (DocumentsContract.isDocumentUri(context, uri) ||
-             uri.pathSegments.contains("tree") ||
-             uri.pathSegments.contains("document"))
-        } catch (e: Exception) { false }
-    }
+    private fun isSafUri(uri: Uri): Boolean = try {
+        uri.scheme == "content" && (
+            uri.pathSegments.contains("tree") ||
+            uri.pathSegments.contains("document") ||
+            DocumentsContract.isDocumentUri(context, uri)
+        )
+    } catch (e: Exception) { false }
 
     override fun read(buffer: ByteArray, offset: Int, length: Int) =
-        delegate?.read(buffer, offset, length) ?: -1
+        delegate?.read(buffer, offset, length) ?: C.RESULT_END_OF_INPUT
 
     override fun getUri(): Uri? = delegate?.uri
-    override fun close() {
-        try { delegate?.close() } catch (e: Exception) { Log.e(TAG, "close error", e) }
-        try { pfd?.close() } catch (e: Exception) { }
-        delegate = null
-        pfd = null
-    }
+    override fun close() { try { delegate?.close() } catch (e: Exception) { Log.e(TAG, "close", e) }; delegate = null }
     override fun addTransferListener(t: TransferListener) { delegate?.addTransferListener(t) }
 }
 
-// ─── SAF DataSource via FileDescriptor ───────────────────────────────────────
+// ─── SAF DataSource (FileDescriptor-based, no missing class) ─────────────────
 
-private class SafFileDescriptorDataSource(
-    private val context: Context
-) : DataSource {
+private class SafDataSource(private val context: Context) : DataSource {
 
     private var pfd: ParcelFileDescriptor? = null
-    private var inputStream: java.io.FileInputStream? = null
+    private var stream: java.io.FileInputStream? = null
     private var uri: Uri? = null
-    private val TAG = "SafFileDescDS"
+    private val TAG = "SafDataSource"
 
     override fun open(dataSpec: DataSpec): Long {
         uri = dataSpec.uri
         return try {
-            pfd = context.contentResolver.openFileDescriptor(dataSpec.uri, "r")
-            inputStream = java.io.FileInputStream(pfd!!.fileDescriptor)
-            // Skip to position if needed
-            if (dataSpec.position > 0) {
-                inputStream!!.skip(dataSpec.position)
-            }
-            pfd!!.statSize.takeIf { it > 0 } ?: C.LENGTH_UNSET.toLong()
+            val descriptor = context.contentResolver.openFileDescriptor(dataSpec.uri, "r")
+                ?: throw DataSourceException(PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND)
+            pfd    = descriptor
+            stream = java.io.FileInputStream(descriptor.fileDescriptor)
+            if (dataSpec.position > 0) stream!!.skip(dataSpec.position)
+            descriptor.statSize.takeIf { it > 0 } ?: C.LENGTH_UNSET.toLong()
+        } catch (e: DataSourceException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Cannot open SAF uri: ${dataSpec.uri}", e)
-            throw androidx.media3.datasource.DataSourceException(
-                e, androidx.media3.common.PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
-            )
+            Log.e(TAG, "Cannot open: ${dataSpec.uri}", e)
+            throw DataSourceException(e, PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND)
         }
     }
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         return try {
-            val n = inputStream?.read(buffer, offset, length) ?: -1
+            val n = stream?.read(buffer, offset, length) ?: return C.RESULT_END_OF_INPUT
             if (n == -1) C.RESULT_END_OF_INPUT else n
         } catch (e: Exception) {
             Log.e(TAG, "read error", e)
@@ -168,10 +158,9 @@ private class SafFileDescriptorDataSource(
 
     override fun getUri(): Uri? = uri
     override fun close() {
-        try { inputStream?.close() } catch (e: Exception) { }
-        try { pfd?.close() } catch (e: Exception) { }
-        inputStream = null
-        pfd = null
+        try { stream?.close() } catch (e: Exception) { }
+        try { pfd?.close()    } catch (e: Exception) { }
+        stream = null; pfd = null
     }
     override fun addTransferListener(t: TransferListener) {}
 }
