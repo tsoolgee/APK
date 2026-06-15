@@ -1,19 +1,19 @@
 package com.musicplayer.service
 
 import android.net.Uri
+import android.util.Log
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.TransferListener
 
 /**
- * DataSource that decrypts XOR-encoded audio on the fly.
+ * XOR-decrypting DataSource wrapper.
  *
- * Auto-detect mode (startOffset == AUTO_DETECT):
- *   1. Read first chunk as-is.
- *   2. Check if it looks like a valid MP3/ID3 header.
- *   3. If not, try XOR-decoding to see if THAT looks valid.
- *   4. Decide once; apply consistently for the rest of the stream.
+ * AUTO_DETECT mode:
+ *  - Reads first chunk as-is
+ *  - If header looks like valid audio → play plain
+ *  - Else XOR-decode header → if valid → play encrypted
+ *  - Else → play plain anyway (graceful fallback)
  */
 internal class BmeDecryptDataSource(
     private val upstream: DataSource,
@@ -21,16 +21,17 @@ internal class BmeDecryptDataSource(
     private val startOffset: Long = AUTO_DETECT
 ) : DataSource {
 
-    private var resolvedOffset: Long = startOffset
+    private var resolvedOffset: Long  = startOffset
     private var decryptEnabled: Boolean = (startOffset != AUTO_DETECT)
     private var bytesRead: Long = 0L
-    private var firstRead = true
+    private var decided   = false
+    private val TAG = "BmeDecrypt"
 
     override fun open(dataSpec: DataSpec): Long {
-        bytesRead = 0L
-        firstRead = true
-        resolvedOffset = startOffset
-        decryptEnabled = (startOffset != AUTO_DETECT)
+        bytesRead       = 0L
+        decided         = false
+        resolvedOffset  = startOffset
+        decryptEnabled  = (startOffset != AUTO_DETECT)
         return upstream.open(dataSpec)
     }
 
@@ -38,26 +39,27 @@ internal class BmeDecryptDataSource(
         val n = upstream.read(buffer, offset, length)
         if (n <= 0) return n
 
-        if (firstRead) {
-            firstRead = false
-            if (startOffset == AUTO_DETECT) {
-                // Try to detect: plain first, then encrypted
-                val headerBytes = buffer.copyOfRange(offset, offset + minOf(n, 10))
-                if (looksLikePlainAudio(headerBytes)) {
-                    // Play as-is — regular MP3
+        if (!decided && startOffset == AUTO_DETECT) {
+            decided = true
+            val header = buffer.sliceArray(offset until (offset + minOf(n, 16)))
+            when {
+                looksLikeAudio(header) -> {
+                    // Plain audio
                     decryptEnabled = false
-                    resolvedOffset = Long.MAX_VALUE // never decrypt
-                } else {
-                    // Try XOR — check if decoded header is valid
-                    val decoded = headerBytes.map { (it.toInt() xor key).toByte() }.toByteArray()
-                    if (looksLikePlainAudio(decoded)) {
-                        decryptEnabled = true
-                        resolvedOffset = findMp3Offset(decoded, 0, decoded.size)
-                    } else {
-                        // Unknown format — play plain anyway
-                        decryptEnabled = false
-                        resolvedOffset = Long.MAX_VALUE
-                    }
+                    resolvedOffset = Long.MAX_VALUE
+                    Log.d(TAG, "Auto-detect: PLAIN")
+                }
+                looksLikeAudio(xorBytes(header, key)) -> {
+                    // XOR-encrypted
+                    decryptEnabled = true
+                    resolvedOffset = findAudioStart(xorBytes(header, key))
+                    Log.d(TAG, "Auto-detect: ENCRYPTED, offset=$resolvedOffset")
+                }
+                else -> {
+                    // Unknown — try plain
+                    decryptEnabled = false
+                    resolvedOffset = Long.MAX_VALUE
+                    Log.w(TAG, "Auto-detect: UNKNOWN, playing plain")
                 }
             }
         }
@@ -75,55 +77,54 @@ internal class BmeDecryptDataSource(
         return n
     }
 
-    // ── Heuristics ────────────────────────────────────────────────────────
+    private fun xorBytes(buf: ByteArray, k: Int) = ByteArray(buf.size) { (buf[it].toInt() xor k).toByte() }
 
-    /** Returns true if the first bytes match MP3 sync, ID3, fLaC, OGG, RIFF */
-    private fun looksLikePlainAudio(buf: ByteArray): Boolean {
-        if (buf.size < 4) return false
-        val b0 = buf[0].toInt() and 0xFF
-        val b1 = buf[1].toInt() and 0xFF
-        val b2 = buf[2].toInt() and 0xFF
-        val b3 = buf[3].toInt() and 0xFF
-
+    private fun looksLikeAudio(b: ByteArray): Boolean {
+        if (b.size < 4) return false
+        val b0 = b[0].toInt() and 0xFF
+        val b1 = b[1].toInt() and 0xFF
+        val b2 = b[2].toInt() and 0xFF
+        val b3 = b[3].toInt() and 0xFF
         // ID3v2
         if (b0 == 0x49 && b1 == 0x44 && b2 == 0x33) return true
-        // MP3 sync (0xFFEx or 0xFFFx)
+        // MP3 sync
         if (b0 == 0xFF && (b1 and 0xE0) == 0xE0) return true
         // fLaC
         if (b0 == 0x66 && b1 == 0x4C && b2 == 0x61 && b3 == 0x43) return true
         // OggS
         if (b0 == 0x4F && b1 == 0x67 && b2 == 0x67 && b3 == 0x53) return true
-        // RIFF (WAV)
+        // RIFF/WAV
         if (b0 == 0x52 && b1 == 0x49 && b2 == 0x46 && b3 == 0x46) return true
-
         return false
     }
 
-    private fun findMp3Offset(buf: ByteArray, off: Int, len: Int): Long {
-        if (len < 10) return 0L
-        val b0 = buf[off].toInt() and 0xFF
-        val b1 = buf[off + 1].toInt() and 0xFF
-        val b2 = buf[off + 2].toInt() and 0xFF
-        // ID3v2
-        if (b0 == 0x49 && b1 == 0x44 && b2 == 0x33) {
-            val size =
-                ((buf[off + 6].toInt() and 0x7F) shl 21) or
-                ((buf[off + 7].toInt() and 0x7F) shl 14) or
-                ((buf[off + 8].toInt() and 0x7F) shl  7) or
-                 (buf[off + 9].toInt() and 0x7F)
+    private fun findAudioStart(b: ByteArray): Long {
+        if (b.size < 10) return 0L
+        // ID3v2 — skip tag
+        if ((b[0].toInt() and 0xFF) == 0x49 &&
+            (b[1].toInt() and 0xFF) == 0x44 &&
+            (b[2].toInt() and 0xFF) == 0x33) {
+            val size = ((b[6].toInt() and 0x7F) shl 21) or
+                       ((b[7].toInt() and 0x7F) shl 14) or
+                       ((b[8].toInt() and 0x7F) shl  7) or
+                        (b[9].toInt() and 0x7F)
             return (size + 10).toLong()
         }
-        // MP3 frame sync
-        for (i in 0 until len - 1) {
-            val x0 = buf[off + i    ].toInt() and 0xFF
-            val x1 = buf[off + i + 1].toInt() and 0xFF
-            if (x0 == 0xFF && (x1 and 0xE0) == 0xE0) return i.toLong()
+        // Find MP3 sync
+        for (i in 0 until b.size - 1) {
+            if ((b[i].toInt() and 0xFF) == 0xFF &&
+                (b[i + 1].toInt() and 0xE0) == 0xE0) return i.toLong()
         }
         return 0L
     }
 
     override fun getUri(): Uri? = upstream.uri
-    override fun close() { upstream.close(); bytesRead = 0L; resolvedOffset = startOffset; firstRead = true }
+    override fun close() {
+        upstream.close()
+        bytesRead = 0L
+        decided   = false
+        resolvedOffset = startOffset
+    }
     override fun addTransferListener(t: TransferListener) = upstream.addTransferListener(t)
 
     companion object {

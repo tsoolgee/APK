@@ -7,122 +7,150 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object MediaScanner {
 
-    // ── Full device scan (MediaStore) ──────────────────────────────────────
+    private const val TAG = "MediaScanner"
+
+    // ── Full device scan ──────────────────────────────────────────────────
 
     suspend fun scanDevice(context: Context): List<Song> = withContext(Dispatchers.IO) {
-        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-            MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        else
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.ALBUM_ID,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.YEAR,
-            MediaStore.Audio.Media.TRACK,
-        )
-
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} > 10000"
         val songs = mutableListOf<Song>()
+        try {
+            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+                MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            else
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 
-        context.contentResolver.query(
-            collection, projection, selection, null,
-            "${MediaStore.Audio.Media.TITLE} ASC"
-        )?.use { cursor -> songs.addAll(cursorToSongs(cursor)) }
+            val projection = arrayOf(
+                MediaStore.Audio.Media._ID,
+                MediaStore.Audio.Media.TITLE,
+                MediaStore.Audio.Media.ARTIST,
+                MediaStore.Audio.Media.ALBUM,
+                MediaStore.Audio.Media.ALBUM_ID,
+                MediaStore.Audio.Media.DURATION,
+                MediaStore.Audio.Media.DATA,
+                MediaStore.Audio.Media.YEAR,
+                MediaStore.Audio.Media.TRACK,
+            )
+            val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 " +
+                            "AND ${MediaStore.Audio.Media.DURATION} > 10000"
 
+            context.contentResolver.query(
+                collection, projection, selection, null,
+                "${MediaStore.Audio.Media.TITLE} ASC"
+            )?.use { cursor -> songs.addAll(cursorToSongs(cursor)) }
+        } catch (e: Exception) {
+            Log.e(TAG, "scanDevice failed", e)
+        }
         songs
     }
 
-    // ── Folder scan (SAF) — recursive into sub-folders ────────────────────
+    // ── SAF folder scan — recursive, safe ────────────────────────────────
 
-    suspend fun scanFolder(context: Context, folderUri: Uri): List<Song> =
+    suspend fun scanFolder(context: Context, treeUri: Uri): List<Song> =
         withContext(Dispatchers.IO) {
             val songs = mutableListOf<Song>()
-            scanFolderRecursive(context, folderUri, songs)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                // SAF tree Uris require API 21+
+                Log.w(TAG, "SAF not supported below API 21")
+                return@withContext songs
+            }
+            try {
+                // Verify we still have permission
+                val perms = context.contentResolver.persistedUriPermissions
+                val hasPermission = perms.any { it.uri == treeUri && it.isReadPermission }
+                if (!hasPermission) {
+                    Log.w(TAG, "No persisted permission for $treeUri")
+                    return@withContext songs
+                }
+                val rootDocId = DocumentsContract.getTreeDocumentId(treeUri)
+                scanDir(context, treeUri, rootDocId, songs)
+            } catch (e: Exception) {
+                Log.e(TAG, "scanFolder failed for $treeUri", e)
+            }
             songs
         }
 
-    private fun scanFolderRecursive(
+    private fun scanDir(
         context: Context,
-        folderUri: Uri,
+        treeUri: Uri,
+        docId: String,
         out: MutableList<Song>
     ) {
-        val docId = try {
-            DocumentsContract.getTreeDocumentId(folderUri)
+        val childrenUri = try {
+            DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
         } catch (e: Exception) {
-            DocumentsContract.getDocumentId(folderUri)
+            Log.e(TAG, "buildChildDocumentsUriUsingTree failed: $docId", e)
+            return
         }
 
-        val childUri = DocumentsContract.buildChildDocumentsUriUsingTree(folderUri, docId)
+        try {
+            context.contentResolver.query(
+                childrenUri,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                ),
+                null, null, null
+            )?.use { cursor ->
+                val idCol   = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                val nameCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val mimeCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
 
-        context.contentResolver.query(
-            childUri,
-            arrayOf(
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                DocumentsContract.Document.COLUMN_MIME_TYPE,
-            ),
-            null, null, null
-        )?.use { cursor ->
-            val idCol   = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-            val nameCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-            val mimeCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
+                while (cursor.moveToNext()) {
+                    try {
+                        val childDocId = cursor.getString(idCol)   ?: continue
+                        val name       = cursor.getString(nameCol) ?: continue
+                        val mime       = cursor.getString(mimeCol) ?: continue
 
-            while (cursor.moveToNext()) {
-                val mime  = cursor.getString(mimeCol) ?: continue
-                val name  = cursor.getString(nameCol) ?: continue
-                val docId = cursor.getString(idCol)   ?: continue
+                        when {
+                            mime == DocumentsContract.Document.MIME_TYPE_DIR ->
+                                scanDir(context, treeUri, childDocId, out)
 
-                when {
-                    // Sub-folder — recurse
-                    mime == DocumentsContract.Document.MIME_TYPE_DIR -> {
-                        val subUri = DocumentsContract.buildTreeDocumentUri(
-                            folderUri.authority, docId
-                        )
-                        scanFolderRecursive(context, subUri, out)
-                    }
-                    // Audio file
-                    isAudioFile(mime, name) -> {
-                        val fileUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, docId)
-                        val path    = fileUri.toString()
-                        val id      = path.hashCode().toLong() and 0x7FFFFFFFFFFFFFFFL
-                        out.add(
-                            Song(
-                                id          = id,
-                                title       = name.substringBeforeLast("."),
-                                artist      = "Unknown Artist",
-                                album       = "Unknown Album",
-                                duration    = 0L,
-                                path        = path,
-                                albumArtUri = null
-                            )
-                        )
+                            isAudioFile(mime, name) -> {
+                                val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, childDocId)
+                                val path    = fileUri.toString()
+                                val id      = (treeUri.toString() + childDocId)
+                                    .hashCode().toLong() and 0x7FFFFFFFFFFFFFFFL
+
+                                out.add(Song(
+                                    id          = id,
+                                    title       = name.substringBeforeLast("."),
+                                    artist      = "Unknown Artist",
+                                    album       = "Unknown Album",
+                                    duration    = 0L,
+                                    path        = path,
+                                    albumArtUri = null
+                                ))
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing row", e)
                     }
                 }
             }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException scanning $childrenUri", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error scanning $childrenUri", e)
         }
     }
 
     private fun isAudioFile(mime: String, name: String): Boolean {
         if (mime.startsWith("audio/")) return true
-        return name.lowercase().let {
-            it.endsWith(".mp3") || it.endsWith(".flac") ||
-            it.endsWith(".ogg") || it.endsWith(".m4a")  ||
-            it.endsWith(".wav") || it.endsWith(".aac")
-        }
+        val lower = name.lowercase()
+        return lower.endsWith(".mp3")  || lower.endsWith(".flac") ||
+               lower.endsWith(".ogg")  || lower.endsWith(".m4a")  ||
+               lower.endsWith(".wav")  || lower.endsWith(".aac")  ||
+               lower.endsWith(".bme")
     }
 
-    // ── Cursor → Song (MediaStore) ────────────────────────────────────────
+    // ── MediaStore cursor → Song list ─────────────────────────────────────
 
     private fun cursorToSongs(cursor: Cursor): List<Song> {
         val songs       = mutableListOf<Song>()
@@ -137,21 +165,25 @@ object MediaScanner {
         val trackCol    = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
 
         while (cursor.moveToNext()) {
-            val id      = cursor.getLong(idCol)
-            val albumId = cursor.getLong(albumIdCol)
-            songs.add(Song(
-                id          = id,
-                title       = cursor.getString(titleCol)  ?: "Unknown",
-                artist      = cursor.getString(artistCol) ?: "Unknown Artist",
-                album       = cursor.getString(albumCol)  ?: "Unknown Album",
-                duration    = cursor.getLong(durationCol),
-                path        = cursor.getString(dataCol)   ?: "",
-                albumArtUri = ContentUris.withAppendedId(
-                    Uri.parse("content://media/external/audio/albumart"), albumId
-                ).toString(),
-                year        = cursor.getInt(yearCol),
-                trackNumber = cursor.getInt(trackCol)
-            ))
+            try {
+                val id      = cursor.getLong(idCol)
+                val albumId = cursor.getLong(albumIdCol)
+                songs.add(Song(
+                    id          = id,
+                    title       = cursor.getString(titleCol)  ?: "Unknown",
+                    artist      = cursor.getString(artistCol) ?: "Unknown Artist",
+                    album       = cursor.getString(albumCol)  ?: "Unknown Album",
+                    duration    = cursor.getLong(durationCol),
+                    path        = cursor.getString(dataCol)   ?: "",
+                    albumArtUri = ContentUris.withAppendedId(
+                        Uri.parse("content://media/external/audio/albumart"), albumId
+                    ).toString(),
+                    year        = cursor.getInt(yearCol),
+                    trackNumber = cursor.getInt(trackCol)
+                ))
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading cursor row", e)
+            }
         }
         return songs
     }
