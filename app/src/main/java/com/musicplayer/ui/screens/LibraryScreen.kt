@@ -1,4 +1,4 @@
-package com.musicplayer.ui.screens
+﻿package com.musicplayer.ui.screens
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -33,7 +33,8 @@ fun LibraryScreen(
     onAddToQueue: (Song) -> Unit,
     onEditSong: (Song) -> Unit,
     onSync: () -> Unit,
-    onBmeSettings: () -> Unit
+    onBmeSettings: () -> Unit,
+    onPickFolder: () -> Unit
 ) {
     val displayedSongs = remember(libraryState) {
         when {
@@ -53,7 +54,7 @@ fun LibraryScreen(
             .background(Background)
             .statusBarsPadding()
     ) {
-        // ── Header ──────────────────────────────────────────────────────────
+        // ג”€ג”€ Header ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -61,32 +62,39 @@ fun LibraryScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("ספריה", style = MaterialTheme.typography.displayLarge)
-            Row {
+            Text("׳¡׳₪׳¨׳™׳”", style = MaterialTheme.typography.displayLarge)
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (libraryState.isScanning) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         color = AccentViolet,
                         strokeWidth = 2.dp
                     )
+                    Spacer(Modifier.width(4.dp))
                 }
+                // Folder picker
+                IconButton(onClick = onPickFolder) {
+                    Icon(Icons.Filled.FolderOpen, "׳‘׳—׳¨ ׳×׳™׳§׳™׳™׳”", tint = AccentViolet)
+                }
+                // Sync
                 IconButton(onClick = onSync) {
-                    Icon(Icons.Filled.Refresh, "Sync", tint = TextSecondary)
+                    Icon(Icons.Filled.Refresh, "׳¨׳¢׳ ׳•׳", tint = TextSecondary)
                 }
+                // Settings (no label ג€” only insiders know)
                 IconButton(onClick = onBmeSettings) {
-                    Icon(Icons.Filled.Settings, "הגדרות BME", tint = TextSecondary)
+                    Icon(Icons.Filled.Settings, null, tint = TextSecondary)
                 }
             }
         }
 
-        // ── Search Bar ──────────────────────────────────────────────────────
+        // ג”€ג”€ Search Bar ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
         OutlinedTextField(
             value = libraryState.searchQuery,
             onValueChange = onSearchQuery,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            placeholder = { Text("חיפוש שירים, אמנים, ז'אנרים...", color = TextTertiary) },
+            placeholder = { Text("׳—׳™׳₪׳•׳© ׳©׳™׳¨׳™׳, ׳׳׳ ׳™׳, ׳–'׳׳ ׳¨׳™׳...", color = TextTertiary) },
             leadingIcon = { Icon(Icons.Filled.Search, null, tint = TextTertiary) },
             trailingIcon = {
                 if (libraryState.searchQuery.isNotEmpty()) {
@@ -109,7 +117,7 @@ fun LibraryScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // ── Filter Mode Toggle ───────────────────────────────────────────────
+        // ג”€ג”€ Filter Mode Toggle ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
         Row(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
@@ -141,7 +149,7 @@ fun LibraryScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        // ── Filter Chips ─────────────────────────────────────────────────────
+        // ג”€ג”€ Filter Chips ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
         when (filterMode) {
             FilterMode.GENRE -> FilterChipRow(
                 items = genres,
@@ -158,21 +166,21 @@ fun LibraryScreen(
 
         Spacer(Modifier.height(4.dp))
 
-        // ── Count ────────────────────────────────────────────────────────────
+        // ג”€ג”€ Count ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
         Text(
-            "${displayedSongs.size} שירים",
+            "${displayedSongs.size} ׳©׳™׳¨׳™׳",
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
         )
 
-        // ── Song List ────────────────────────────────────────────────────────
+        // ג”€ג”€ Song List ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
         if (displayedSongs.isEmpty()) {
             EmptyState(
                 icon = Icons.Filled.MusicOff,
-                title = if (libraryState.searchQuery.isNotBlank()) "לא נמצאו תוצאות"
-                else "הספרייה ריקה",
-                subtitle = if (libraryState.searchQuery.isNotBlank()) "נסה חיפוש אחר"
-                else "לחץ רענון כדי לסרוק את המכשיר"
+                title = if (libraryState.searchQuery.isNotBlank()) "׳׳ ׳ ׳׳¦׳׳• ׳×׳•׳¦׳׳•׳×"
+                else "׳”׳¡׳₪׳¨׳™׳™׳” ׳¨׳™׳§׳”",
+                subtitle = if (libraryState.searchQuery.isNotBlank()) "׳ ׳¡׳” ׳—׳™׳₪׳•׳© ׳׳—׳¨"
+                else "׳׳—׳¥ נ“ ׳׳‘׳—׳™׳¨׳× ׳×׳™׳§׳™׳™׳” ׳׳• ׳¨׳¢׳ ׳•׳ ׳׳¡׳¨׳™׳§׳× ׳”׳׳›׳©׳™׳¨"
             )
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
@@ -192,7 +200,7 @@ fun LibraryScreen(
 }
 
 enum class FilterMode(val label: String) {
-    ALL("הכל"), GENRE("ז'אנר"), ARTIST("אמן")
+    ALL("׳”׳›׳"), GENRE("׳–'׳׳ ׳¨"), ARTIST("׳׳׳")
 }
 
 @Composable
@@ -211,3 +219,4 @@ fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, title: Str
         Text(subtitle, style = MaterialTheme.typography.bodyLarge)
     }
 }
+

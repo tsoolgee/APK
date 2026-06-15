@@ -1,6 +1,7 @@
-package com.musicplayer
+﻿package com.musicplayer
 
 import android.Manifest
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -25,18 +26,18 @@ import com.musicplayer.ui.screens.*
 import com.musicplayer.ui.theme.*
 import com.musicplayer.viewmodel.PlayerViewModel
 
-// ─── Navigation Destinations ─────────────────────────────────────────────────
+// ג”€ג”€ג”€ Navigation Destinations ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Library     : Screen("library",      "ספרייה",   Icons.Filled.LibraryMusic)
-    object Favorites   : Screen("favorites",    "מועדפים",  Icons.Filled.Favorite)
-    object Queue       : Screen("queue",        "תור",      Icons.Filled.QueueMusic)
+    object Library     : Screen("library",      "׳¡׳₪׳¨׳™׳™׳”",   Icons.Filled.LibraryMusic)
+    object Favorites   : Screen("favorites",    "׳׳•׳¢׳“׳₪׳™׳",  Icons.Filled.Favorite)
+    object Queue       : Screen("queue",        "׳×׳•׳¨",      Icons.Filled.QueueMusic)
     object BmeSettings : Screen("bme_settings", "",         Icons.Filled.Settings)
 }
 
 val bottomNavItems = listOf(Screen.Library, Screen.Favorites, Screen.Queue)
 
-// ─── Main Activity ────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ Main Activity ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 class MainActivity : ComponentActivity() {
 
@@ -48,12 +49,34 @@ class MainActivity : ComponentActivity() {
         if (grants.values.any { it }) viewModel.syncLibrary()
     }
 
+    // Folder picker ג€” opens system folder browser, scans selected folder
+    private var folderPickerCallback: ((Uri) -> Unit)? = null
+    private val folderPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            folderPickerCallback?.invoke(uri)
+        }
+    }
+
+    fun launchFolderPicker(onResult: (Uri) -> Unit) {
+        folderPickerCallback = onResult
+        folderPickerLauncher.launch(null)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestPermissions()
         setContent {
             MusicPlayerTheme {
-                MusicPlayerApp(viewModel = viewModel)
+                MusicPlayerApp(
+                    viewModel     = viewModel,
+                    activity      = this
+                )
             }
         }
     }
@@ -67,11 +90,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// ─── App Root ─────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ App Root ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MusicPlayerApp(viewModel: PlayerViewModel) {
+fun MusicPlayerApp(
+    viewModel: PlayerViewModel,
+    activity: MainActivity
+) {
     val navController  = rememberNavController()
     val playerState    by viewModel.playerState.collectAsState()
     val libraryState   by viewModel.libraryState.collectAsState()
@@ -83,7 +109,7 @@ fun MusicPlayerApp(viewModel: PlayerViewModel) {
 
     var showNowPlaying by remember { mutableStateOf(false) }
 
-    // ── Full-screen Now Playing ───────────────────────────────────────────
+    // ג”€ג”€ Full-screen Now Playing ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
     if (showNowPlaying && playerState.currentSong != null) {
         NowPlayingScreen(
             state        = playerState,
@@ -100,7 +126,7 @@ fun MusicPlayerApp(viewModel: PlayerViewModel) {
         return
     }
 
-    // ── Edit Song Dialog ──────────────────────────────────────────────────
+    // ג”€ג”€ Edit Song Dialog ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
     editSong?.let { song ->
         EditSongDialog(song = song, onSave = viewModel::saveSong, onDismiss = viewModel::closeEditSong)
     }
@@ -112,7 +138,6 @@ fun MusicPlayerApp(viewModel: PlayerViewModel) {
             val currentDestination   = navBackStackEntry?.destination
             val isOnBmeSettings      = currentDestination?.route == Screen.BmeSettings.route
 
-            // הסתר bottom bar במסך הגדרות BME
             if (!isOnBmeSettings) {
                 Column {
                     AnimatedVisibility(
@@ -185,7 +210,12 @@ fun MusicPlayerApp(viewModel: PlayerViewModel) {
                     onAddToQueue  = viewModel::addToQueue,
                     onEditSong    = viewModel::openEditSong,
                     onSync        = viewModel::syncLibrary,
-                    onBmeSettings = { navController.navigate(Screen.BmeSettings.route) }
+                    onBmeSettings = { navController.navigate(Screen.BmeSettings.route) },
+                    onPickFolder  = {
+                        activity.launchFolderPicker { uri ->
+                            viewModel.syncFolder(activity, uri)
+                        }
+                    }
                 )
             }
 
@@ -218,3 +248,4 @@ fun MusicPlayerApp(viewModel: PlayerViewModel) {
         }
     }
 }
+

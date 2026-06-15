@@ -1,7 +1,9 @@
-package com.musicplayer.viewmodel
+﻿package com.musicplayer.viewmodel
 
 import android.app.Application
 import android.content.ComponentName
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -20,10 +22,10 @@ import kotlinx.coroutines.launch
 data class PlayerState(
     val currentSong: Song? = null,
     val isPlaying: Boolean = false,
-    val progress: Long = 0L,          // ms
+    val progress: Long = 0L,
     val duration: Long = 0L,
     val shuffleEnabled: Boolean = false,
-    val repeatMode: Int = Player.REPEAT_MODE_OFF,  // OFF=0, ONE=1, ALL=2
+    val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val isLoading: Boolean = false
 )
 
@@ -40,17 +42,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val repo = MusicRepository.getInstance(application)
 
-    // ── Player state ──────────────────────────────────────────────────────
+    // ג”€ג”€ Player state ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
 
-    // ── Library state ─────────────────────────────────────────────────────
+    // ג”€ג”€ Library state ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private val _libraryState = MutableStateFlow(LibraryState())
     val libraryState: StateFlow<LibraryState> = _libraryState.asStateFlow()
 
-    // ── Collections ───────────────────────────────────────────────────────
+    // ג”€ג”€ Collections ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     val favorites: StateFlow<List<Song>> = repo.favorites
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -64,12 +66,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val artists: StateFlow<List<String>> = repo.allArtists
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // ── Edit song dialog ──────────────────────────────────────────────────
+    // ג”€ג”€ Edit song dialog ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private val _editSong = MutableStateFlow<Song?>(null)
     val editSong: StateFlow<Song?> = _editSong.asStateFlow()
 
-    // ── MediaController ───────────────────────────────────────────────────
+    // ג”€ג”€ MediaController ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var controller: MediaController? = null
@@ -134,7 +136,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // ── Library actions ───────────────────────────────────────────────────
+    // ג”€ג”€ Library actions ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private fun loadLibrary() {
         viewModelScope.launch {
@@ -150,6 +152,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _libraryState.value = _libraryState.value.copy(isScanning = true)
             repo.syncLibrary(getApplication())
+            _libraryState.value = _libraryState.value.copy(isScanning = false)
+        }
+    }
+
+    /** Scan a user-chosen folder (SAF Uri) */
+    fun syncFolder(context: Context, folderUri: Uri) {
+        viewModelScope.launch {
+            _libraryState.value = _libraryState.value.copy(isScanning = true)
+            repo.syncFolder(context, folderUri)
             _libraryState.value = _libraryState.value.copy(isScanning = false)
         }
     }
@@ -179,7 +190,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _libraryState.value = _libraryState.value.copy(selectedArtist = artist, selectedGenre = null)
     }
 
-    // ── Playback actions ──────────────────────────────────────────────────
+    // ג”€ג”€ Playback actions ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     fun playSong(song: Song, songList: List<Song> = emptyList()) {
         viewModelScope.launch {
@@ -216,9 +227,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun toggleShuffle() {
-        controller?.let {
-            it.shuffleModeEnabled = !it.shuffleModeEnabled
-        }
+        controller?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
     }
 
     fun cycleRepeat() {
@@ -231,13 +240,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // ── Favorites ─────────────────────────────────────────────────────────
+    // ג”€ג”€ Favorites ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     fun toggleFavorite(song: Song) {
         viewModelScope.launch { repo.toggleFavorite(song) }
     }
 
-    // ── Queue ─────────────────────────────────────────────────────────────
+    // ג”€ג”€ Queue ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     fun addToQueue(song: Song) {
         viewModelScope.launch {
@@ -259,7 +268,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // ── Edit song metadata ────────────────────────────────────────────────
+    // ג”€ג”€ Edit song metadata ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     fun openEditSong(song: Song) { _editSong.value = song }
     fun closeEditSong() { _editSong.value = null }
@@ -268,7 +277,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repo.updateSong(song)
             _editSong.value = null
-            // Refresh current song if it's the one being edited
             if (_playerState.value.currentSong?.id == song.id) {
                 _playerState.value = _playerState.value.copy(currentSong = song)
             }
@@ -281,3 +289,4 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         super.onCleared()
     }
 }
+

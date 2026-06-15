@@ -1,6 +1,7 @@
-package com.musicplayer.data
+﻿package com.musicplayer.data
 
 import android.content.Context
+import android.net.Uri
 import kotlinx.coroutines.flow.Flow
 
 class MusicRepository(private val db: MusicDatabase) {
@@ -8,7 +9,7 @@ class MusicRepository(private val db: MusicDatabase) {
     private val songDao = db.songDao()
     private val queueDao = db.queueDao()
 
-    // ── Songs ──────────────────────────────────────────────────────────────
+    // ג”€ג”€ Songs ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     val allSongs: Flow<List<Song>> = songDao.getAllSongs()
     val favorites: Flow<List<Song>> = songDao.getFavorites()
@@ -21,15 +22,26 @@ class MusicRepository(private val db: MusicDatabase) {
 
     suspend fun getSongById(id: Long): Song? = songDao.getSongById(id)
 
+    /** Full device scan via MediaStore */
     suspend fun syncLibrary(context: Context) {
         val scanned = MediaScanner.scanDevice(context)
-        scanned.forEach { song ->
-            val dbSong = songDao.getSongById(song.id)
+        upsertSongs(scanned)
+    }
+
+    /** Scan a specific folder chosen by the user (SAF Uri) */
+    suspend fun syncFolder(context: Context, folderUri: Uri) {
+        val scanned = MediaScanner.scanFolder(context, folderUri)
+        upsertSongs(scanned)
+    }
+
+    private suspend fun upsertSongs(songs: List<Song>) {
+        songs.forEach { song ->
+            val existing = songDao.getSongById(song.id)
             songDao.insertSong(
                 song.copy(
-                    genre = dbSong?.genre ?: song.genre,
-                    isFavorite = dbSong?.isFavorite ?: false,
-                    playCount = dbSong?.playCount ?: 0
+                    genre      = existing?.genre      ?: song.genre,
+                    isFavorite = existing?.isFavorite ?: false,
+                    playCount  = existing?.playCount  ?: 0
                 )
             )
         }
@@ -43,7 +55,7 @@ class MusicRepository(private val db: MusicDatabase) {
 
     suspend fun incrementPlayCount(id: Long) = songDao.incrementPlayCount(id)
 
-    // ── Queue ──────────────────────────────────────────────────────────────
+    // ג”€ג”€ Queue ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     val queue: Flow<List<Song>> = queueDao.getQueueWithSongs()
 
@@ -73,3 +85,4 @@ class MusicRepository(private val db: MusicDatabase) {
         }
     }
 }
+

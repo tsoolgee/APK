@@ -1,23 +1,27 @@
-package com.musicplayer.data
+﻿package com.musicplayer.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.database.Cursor
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 object MediaScanner {
+
+    // ג”€ג”€ Full device scan (MediaStore) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     suspend fun scanDevice(context: Context): List<Song> = withContext(Dispatchers.IO) {
         val songs = mutableListOf<Song>()
 
-        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        } else {
+        else
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        }
 
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
@@ -32,44 +36,69 @@ object MediaScanner {
         )
 
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} > 10000"
-        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
         context.contentResolver.query(
-            collection,
-            projection,
-            selection,
-            null,
-            sortOrder
+            collection, projection, selection, null,
+            "${MediaStore.Audio.Media.TITLE} ASC"
         )?.use { cursor ->
-            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-            val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-            val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-            val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
-            val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-            val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
-            val yearCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
-            val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
+            songs.addAll(cursorToSongs(cursor))
+        }
+
+        songs
+    }
+
+    // ג”€ג”€ Folder scan (SAF ג€” Storage Access Framework) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+
+    suspend fun scanFolder(context: Context, folderUri: Uri): List<Song> = withContext(Dispatchers.IO) {
+        val songs = mutableListOf<Song>()
+        val treeUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+            folderUri,
+            DocumentsContract.getTreeDocumentId(folderUri)
+        )
+
+        context.contentResolver.query(
+            treeUri,
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE,
+                DocumentsContract.Document.COLUMN_SIZE
+            ),
+            null, null, null
+        )?.use { cursor ->
+            val idCol   = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+            val nameCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            val mimeCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
 
             while (cursor.moveToNext()) {
-                val id = cursor.getLong(idCol)
-                val albumId = cursor.getLong(albumIdCol)
-                val albumArtUri = ContentUris.withAppendedId(
-                    Uri.parse("content://media/external/audio/albumart"),
-                    albumId
-                ).toString()
+                val mime = cursor.getString(mimeCol) ?: continue
+                val name = cursor.getString(nameCol) ?: continue
+
+                // Accept audio/* or files that look like mp3/flac/ogg/m4a
+                val isAudio = mime.startsWith("audio/") ||
+                    name.lowercase().let { n ->
+                        n.endsWith(".mp3") || n.endsWith(".flac") ||
+                        n.endsWith(".ogg") || n.endsWith(".m4a")  ||
+                        n.endsWith(".wav") || n.endsWith(".aac")
+                    }
+                if (!isAudio) continue
+
+                val docId  = cursor.getString(idCol)
+                val fileUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, docId)
+                val path    = fileUri.toString()
+
+                // Use docId hash as stable ID (no MediaStore ID available)
+                val id = path.hashCode().toLong() and 0x7FFFFFFF_FFFFFFFFL
 
                 songs.add(
                     Song(
-                        id = id,
-                        title = cursor.getString(titleCol) ?: "Unknown",
-                        artist = cursor.getString(artistCol) ?: "Unknown Artist",
-                        album = cursor.getString(albumCol) ?: "Unknown Album",
-                        duration = cursor.getLong(durationCol),
-                        path = cursor.getString(dataCol) ?: "",
-                        albumArtUri = albumArtUri,
-                        year = cursor.getInt(yearCol),
-                        trackNumber = cursor.getInt(trackCol)
+                        id           = id,
+                        title        = name.substringBeforeLast("."),
+                        artist       = "Unknown Artist",
+                        album        = "Unknown Album",
+                        duration     = 0L,
+                        path         = path,
+                        albumArtUri  = null
                     )
                 )
             }
@@ -78,6 +107,46 @@ object MediaScanner {
         songs
     }
 
+    // ג”€ג”€ Cursor ג†’ Song list (MediaStore) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+
+    private fun cursorToSongs(cursor: Cursor): List<Song> {
+        val songs = mutableListOf<Song>()
+        val idCol       = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+        val titleCol    = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+        val artistCol   = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+        val albumCol    = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+        val albumIdCol  = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+        val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+        val dataCol     = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+        val yearCol     = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
+        val trackCol    = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
+
+        while (cursor.moveToNext()) {
+            val id      = cursor.getLong(idCol)
+            val albumId = cursor.getLong(albumIdCol)
+            val albumArtUri = ContentUris.withAppendedId(
+                Uri.parse("content://media/external/audio/albumart"), albumId
+            ).toString()
+
+            songs.add(
+                Song(
+                    id          = id,
+                    title       = cursor.getString(titleCol)   ?: "Unknown",
+                    artist      = cursor.getString(artistCol)  ?: "Unknown Artist",
+                    album       = cursor.getString(albumCol)   ?: "Unknown Album",
+                    duration    = cursor.getLong(durationCol),
+                    path        = cursor.getString(dataCol)    ?: "",
+                    albumArtUri = albumArtUri,
+                    year        = cursor.getInt(yearCol),
+                    trackNumber = cursor.getInt(trackCol)
+                )
+            )
+        }
+        return songs
+    }
+
+    // ג”€ג”€ Helpers ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+
     fun formatDuration(ms: Long): String {
         val totalSeconds = ms / 1000
         val minutes = totalSeconds / 60
@@ -85,3 +154,4 @@ object MediaScanner {
         return "%d:%02d".format(minutes, seconds)
     }
 }
+

@@ -1,19 +1,15 @@
-package com.musicplayer.service
+﻿package com.musicplayer.service
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 
-/**
- * ניהול פרופילי BME — שמירה וטעינה מ-SharedPreferences.
- * "BME" הוא השם שחשוף לממשק.
- */
 data class BmeProfile(
     val id: String,
     val name: String,
-    val key: Int,                                          // ערך פנימי (1-255)
+    val key: Int,                                          // 1-255
     val startOffset: Long = BmeDecryptDataSource.AUTO_DETECT,
-    val filePatterns: List<String> = emptyList(),          // ריק = כל הקבצים
+    val filePatterns: List<String> = emptyList(),          // empty = all files
     val isBuiltIn: Boolean = false
 )
 
@@ -22,20 +18,22 @@ object BmeProfileManager {
     private const val PREFS = "bme_profiles"
     private const val COUNT = "count"
 
-    // ── מובנים ────────────────────────────────────────────────────────────
+    // ג”€ג”€ Built-in ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // filePatterns is empty so the auto-detect logic in BmeDecryptDataSource
+    // decides per-file whether decryption is needed (tries plain first).
 
     val BUILT_IN: List<BmeProfile> = listOf(
         BmeProfile(
             id           = "builtin_default",
-            name         = "BME סטנדרטי",
+            name         = "׳¡׳˜׳ ׳“׳¨׳˜׳™",
             key          = 27,
             startOffset  = BmeDecryptDataSource.AUTO_DETECT,
-            filePatterns = listOf("_bme"),
+            filePatterns = emptyList(),   // applies to every file
             isBuiltIn    = true
         )
     )
 
-    // ── CRUD ──────────────────────────────────────────────────────────────
+    // ג”€ג”€ CRUD ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private fun prefs(ctx: Context): SharedPreferences =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -87,13 +85,16 @@ object BmeProfileManager {
         saveUserProfiles(ctx, getUserProfiles(ctx).map { if (it.id == profile.id) profile else it })
     }
 
-    // ── Matching ──────────────────────────────────────────────────────────
+    // ג”€ג”€ Matching ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+    // Returns the first matching profile (user profiles override built-ins).
+    // Since AUTO_DETECT is used, even "matches all" profiles are safe ג€”
+    // the DataSource decides whether to actually decrypt.
 
     fun findProfile(ctx: Context, filePath: String): BmeProfile? {
         val lower = filePath.lowercase()
-        // משתמש לפני מובנים (override)
         return (getUserProfiles(ctx) + BUILT_IN).firstOrNull { p ->
             p.filePatterns.isEmpty() || p.filePatterns.any { lower.contains(it.lowercase()) }
         }
     }
 }
+
