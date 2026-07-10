@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Overlay Manager</string>
+    <string name="edit_layer_title">עריכת שכבה</string>
+
+    <string name="master_switch_label">הצג שכבות (הפעל שירות)</string>
+    <string name="auto_start_label">הפעלה אוטומטית עם המכשיר</string>
+    <string name="add_layer">הוסף שכבה</string>
+    <string name="no_layers_yet">אין עדיין שכבות. לחצו \"הוסף שכבה\" כדי להתחיל.</string>
+    <string name="layer_subtitle_format">%1$d×%2$d px · שקיפות %3$d</string>
+    <string name="delete_layer">מחק שכבה</string>
+
+    <string name="label_name">שם השכבה</string>
+    <string name="pick_image">בחר תמונה…</string>
+    <string name="label_width">רוחב (px)</string>
+    <string name="label_height">גובה (px)</string>
+    <string name="label_anchor_h">עוגן אופקי</string>
+    <string name="label_anchor_v">עוגן אנכי</string>
+    <string name="label_offset_x">מרחק אופקי (%%)</string>
+    <string name="label_offset_y">מרחק אנכי (%%)</string>
+    <string name="label_alpha">שקיפות (0-255)</string>
+    <string name="label_tint">טינט צבע</string>
+    <string name="label_locked">נעול (שקוף לקליקים)</string>
+    <string name="save_layer">שמור</string>
+    <string name="default_layer_name">שכבה חדשה</string>
+
+    <string name="anchor_left">שמאל</string>
+    <string name="anchor_center">מרכז</string>
+    <string name="anchor_right">ימין</string>
+    <string name="anchor_top">עליון</string>
+    <string name="anchor_middle">מרכז</string>
+    <string name="anchor_bottom">תחתון</string>
+
+    <string name="tint_none">ללא</string>
+    <string name="tint_red">אדום</string>
+    <string name="tint_green">ירוק</string>
+    <string name="tint_blue">כחול</string>
+    <string name="tint_yellow">צהוב</string>
+    <string name="tint_black">שחור</string>
+    <string name="tint_white">לבן</string>
+
+    <string name="overlay_permission_denied">ההרשאה \"הצגה מעל אפליקציות אחרות\" נדרשת כדי להציג שכבות</string>
+    <string name="no_image_picker_found">לא נמצאה אפליקציה לבחירת תמונות במכשיר</string>
+
+    <string name="notification_channel_name">Overlay Manager</string>
+    <string name="notification_text">השכבות פעילות ברקע</string>
+    <string name="action_toggle_all">הצג/הסתר הכל</string>
+    <string name="action_stop">כבה</string>
+
+    <!-- Lock screen -->
+    <string name="pin_hint">קוד PIN</string>
+    <string name="pin_confirm_hint">אימות קוד PIN</string>
+    <string name="unlock">כניסה</string>
+    <string name="set_new_pin">הגדר קוד PIN חדש לכניסה לאפליקציה</string>
+    <string name="enter_pin">הזן קוד PIN</string>
+    <string name="pin_too_short">קוד PIN חייב להכיל לפחות 4 ספרות</string>
+    <string name="pin_mismatch">הקודים אינם תואמים, נסו שוב</string>
+    <string name="pin_saved">קוד ה-PIN נשמר</string>
+    <string name="wrong_pin">קוד שגוי</string>
+    <string name="owner_stamp_format">מכשיר זה שייך ל: %1$s\nטלפון: %2$s</string>
+    <string name="skip_pin_setup">המשך בלי קוד PIN</string>
+
+    <!-- Security screen -->
+    <string name="security_title">הגנה ואבטחה</string>
+    <string name="owner_stamp_section_title">חותמת בעלים</string>
+    <string name="owner_stamp_section_desc">יוצג על מסך הנעילה של האפליקציה כהוכחת בעלות במקרה של גניבה</string>
+    <string name="label_owner_name">שם מלא</string>
+    <string name="label_owner_phone">מספר טלפון</string>
+    <string name="save">שמור</string>
+    <string name="saved">נשמר</string>
+
+    <string name="pin_section_title">קוד PIN לכניסה</string>
+    <string name="pin_section_desc">מגן על מסכי האפליקציה מפני מי שמחזיק במכשיר הפתוח שלכם</string>
+    <string name="change_pin">שנה קוד PIN</string>
+    <string name="pin_status_on">הגנת PIN: פעילה</string>
+    <string name="pin_status_off">הגנת PIN: כבויה - כל אחד שיפתח את האפליקציה ייכנס ישירות</string>
+    <string name="enable_pin_lock">הפעל הגנת PIN</string>
+    <string name="disable_pin_lock">בטל הגנת PIN</string>
+    <string name="pin_disabled_toast">הגנת ה-PIN בוטלה. אפשר להפעיל אותה מחדש בכל עת מכאן.</string>
+
+    <string name="admin_section_title">הרשאת מנהל מכשיר (הרתעת גניבה)</string>
+    <string name="admin_section_desc">חשוב: זו הרתעה בלבד ולא הגנה אמיתית מפני הסרה. אנדרואיד מאפשר לכל אחד לבטל הרשאת מנהל דרך ההגדרות - האפליקציה רק תנעל את המסך מיד כשמנסים לבטל, ולא יכולה לחסום את זה בסיסמה משלה.</string>
+    <string name="admin_status_on">מצב: פעיל</string>
+    <string name="admin_status_off">מצב: כבוי</string>
+    <string name="enable_admin">הפעל הגנת מנהל מכשיר</string>
+    <string name="disable_admin">כבה הגנת מנהל מכשיר</string>
+    <string name="admin_add_explanation">מאפשר לאפליקציה לנעול את המסך מיד אם מישהו ינסה לבטל את ההרשאה הזו - הרתעת גניבה בלבד.</string>
+    <string name="admin_not_supported">המכשיר הזה לא תומך בהרשאות מנהל מכשיר</string>
+    <string name="admin_enabled_toast">הגנת מנהל מכשיר הופעלה</string>
+    <string name="admin_disabled_toast">הגנת מנהל מכשיר כובתה</string>
+    <string name="admin_disable_warning">שימו לב: ביטול הרשאה זו יסיר את הגנת ההרתעה מפני גניבה. המסך ננעל כעת.</string>
+
+    <string name="battery_section_title">מניעת סגירת השירות ברקע</string>
+    <string name="battery_section_desc">אם השכבות נעלמות אחרי סגירת האפליקציה מ\"יישומים אחרונים\", תנו לאפליקציה פטור מניהול סוללה כדי שהשירות ימשיך לרוץ</string>
+    <string name="request_battery_exemption">בקש פטור מאופטימיזציית סוללה</string>
+    <string name="battery_exemption_not_needed">גרסת אנדרואיד זו לא סוגרת שירותים בגלל סוללה</string>
+    <string name="battery_exemption_already_granted">הפטור כבר ניתן</string>
+    <string name="battery_exemption_unavailable">המכשיר לא תומך במסך הזה - חפשו \"ניהול סוללה\" בהגדרות היצרן</string>
+
+    <string name="notification_section_title">התראה קבועה בוילון ההתראות</string>
+    <string name="notification_section_desc">מ-Android 8 ומעלה, אנדרואיד מחייב התראה גלויה כל עוד השירות רץ \"בפעולת חזית\" (foreground) - זו הדרך שהמערכת שומרת על שקיפות לגבי מה שרץ ברקע, ולא ניתן לעקוף אותה טכנית. אם ההתראה מפריעה לכם, אפשר לכבות אותה - אבל אז השירות עובר להיות שירות רגיל, ואנדרואיד עלול לסגור אותו מעצמו אחרי זמן מה כשהאפליקציה לא בחזית (כלומר השכבות עלולות להיעלם מדי פעם וידרשו הפעלה מחדש). אם השכבות חשובות לכם שיישארו יציבות לאורך זמן, מומלץ להשאיר את ההתראה דלוקה.</string>
+    <string name="notification_status_on">התראה: מוצגת</string>
+    <string name="notification_status_off">התראה: מוסתרת (השירות פחות יציב ברקע)</string>
+    <string name="hide_notification">הסתר את ההתראה</string>
+    <string name="show_notification_action">הצג את ההתראה מחדש</string>
+    <string name="notification_hidden_toast">ההתראה הוסתרה. אם השכבות נעלמות אחרי זמן, זה בגלל שהמערכת סגרה את השירות - אפשר להחזיר את ההתראה בכל עת מכאן.</string>
+    <string name="notification_shown_toast">ההתראה הוצגה מחדש</string>
+</resources>

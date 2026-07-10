@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <!-- Lets the app lock the screen immediately (dpm.lockNow()) the
+             moment someone tries to remove device-admin protection, as a
+             theft deterrent. This is the only policy requested - no wipe,
+             no password-policy enforcement, nothing else. -->
+        <force-lock />
+    </uses-policies>
+</device-admin>

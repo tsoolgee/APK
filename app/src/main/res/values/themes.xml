@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Plain platform theme - no Material Components library involved.
+        DeviceDefault.Light.NoActionBar exists since API 14 and automatically
+        maps to a Holo look on API 19-20 and a Material look on API 21+, so
+        the app still looks native on every supported version without any
+        external theming library. Accent colors (android:colorPrimary etc.)
+        are framework attributes that only exist starting API 21, so they are
+        applied separately in values-v21/themes.xml instead of here, to avoid
+        referencing an attribute the real Android 4.4 framework doesn't have.
+    -->
+    <style name="Theme.OverlayManager" parent="android:Theme.DeviceDefault.Light.NoActionBar" />
+</resources>
